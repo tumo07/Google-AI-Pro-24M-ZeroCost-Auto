@@ -51,8 +51,11 @@ def log_to_file(msg: str):
     with open(LOG_PATH, "a", encoding="utf-8") as f:
         f.write(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] {msg}\n")
 
-def prepare_edge_profile(profile_dir: str):
-    """Pre-configures the Edge profile to ensure Developer Mode is enabled so Edge never prompts for it."""
+def prepare_browser_profile(profile_dir: str):
+    """
+    Pre-configures the profile to enable Developer Mode and suppress
+    unpacked extension prompts on both Microsoft Edge and Google Chrome.
+    """
     try:
         def_dir = os.path.join(profile_dir, "Default")
         os.makedirs(def_dir, exist_ok=True)
@@ -70,10 +73,16 @@ def prepare_edge_profile(profile_dir: str):
         ui = ext.setdefault("ui", {})
         ui["developer_mode"] = True
         ext.setdefault("alerts", {})["initialized"] = True
+        prefs.setdefault("browser", {})["check_default_browser"] = False
+        prefs.setdefault("profile", {})["exit_type"] = "Normal"
+        prefs.setdefault("profile", {})["exited_cleanly"] = True
         with open(pref_file, "w", encoding="utf-8") as f:
             json.dump(prefs, f)
     except Exception:
         pass
+
+def prepare_edge_profile(profile_dir: str):
+    return prepare_browser_profile(profile_dir)
 
 class StackingEngine:
     def __init__(self, account_id: str = "Account_1", on_event: Optional[Callable[[str, str], None]] = None):
@@ -340,7 +349,18 @@ exit
             await asyncio.sleep(0.8)
 
         # Halt and wait for login
-        self.emit("HALT_LOGIN", f"Chờ đăng nhập Google trên trình duyệt Edge cho [{self.account_id}]...")
+        self.emit("HALT_LOGIN", f"Chờ đăng nhập Google trên trình duyệt cho [{self.account_id}]...")
+        for p in page.context.pages:
+            await self.show_guidance_popup(
+                p,
+                badge="BƯỚC 1: ĐĂNG NHẬP GOOGLE",
+                title="Vui lòng đăng nhập tài khoản Google cần nâng cấp",
+                steps=[
+                    "Nhập địa chỉ email và mật khẩu tài khoản Google của bạn.",
+                    "Hoàn tất các bước xác minh bảo mật hoặc 2FA (nếu có).",
+                    "Sau khi đăng nhập thành công, hệ thống sẽ tự động phát hiện và tiếp tục!"
+                ]
+            )
         detected_email = ""
         max_wait = 360 # 6 minutes max
         start_ts = time.time()
@@ -500,7 +520,9 @@ exit
                 return
 
             context = browser.contexts[0]
+            # Chrome Fallback: Always attach hook via CDP to guarantee extension logic works even if Chrome blocks unpacked extensions
             await context.add_init_script("window.__INIT_TEST = null;\n" + automation_engine.HOOK_JS)
+            self.emit("INFO", "🛡️ Đã đồng bộ cơ chế kích hoạt ưu đãi vào tiến trình trình duyệt.")
             page = context.pages[0] if context.pages else await context.new_page()
             await page.set_viewport_size({"width": 1400, "height": 950})
 

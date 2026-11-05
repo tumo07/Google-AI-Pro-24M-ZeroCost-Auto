@@ -24,21 +24,39 @@ import zipfile
 from typing import Callable, Dict, Any, Optional
 from playwright.async_api import async_playwright
 
-def _find_chrome_path(prefer_edge: bool = True) -> str:
+def _find_browser_binary(prefer_edge: bool = True):
+    """
+    Finds the best available browser executable across Edge, Chrome, Brave, and Chromium.
+    Returns (browser_name, browser_path).
+    """
     edge_paths = [
         r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe",
         r"C:\Program Files\Microsoft\Edge\Application\msedge.exe",
+        os.path.expandvars(r"%LOCALAPPDATA%\Microsoft\Edge\Application\msedge.exe"),
     ]
     chrome_paths = [
         r"C:\Program Files\Google\Chrome\Application\chrome.exe",
         r"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe",
         os.path.expandvars(r"%LOCALAPPDATA%\Google\Chrome\Application\chrome.exe"),
+        os.path.expandvars(r"%PROGRAMFILES%\Google\Chrome\Application\chrome.exe"),
+        os.path.expandvars(r"%PROGRAMFILES(X86)%\Google\Chrome\Application\chrome.exe"),
     ]
-    candidates = (edge_paths + chrome_paths) if prefer_edge else (chrome_paths + edge_paths)
-    for p in candidates:
+    brave_paths = [
+        r"C:\Program Files\BraveSoftware\Brave-Browser\Application\brave.exe",
+        os.path.expandvars(r"%LOCALAPPDATA%\BraveSoftware\Brave-Browser\Application\brave.exe"),
+    ]
+    candidates = [("Edge", p) for p in edge_paths] + [("Chrome", p) for p in chrome_paths] + [("Brave", p) for p in brave_paths]
+    if not prefer_edge:
+        candidates = [("Chrome", p) for p in chrome_paths] + [("Edge", p) for p in edge_paths] + [("Brave", p) for p in brave_paths]
+    
+    for name, p in candidates:
         if os.path.exists(p):
-            return p
-    return candidates[0]
+            return name, p
+    return "Edge", edge_paths[0]
+
+def _find_chrome_path(prefer_edge: bool = True) -> str:
+    name, path = _find_browser_binary(prefer_edge=prefer_edge)
+    return path
 
 
 CHROME_PATH = _find_chrome_path()
@@ -2112,6 +2130,9 @@ class GoogleUltraAutomator:
             "--no-first-run",
             "--no-default-browser-check",
             "--disable-popup-blocking",
+            "--disable-blink-features=AutomationControlled",
+            "--enable-features=ExtensionsToolbarMenu",
+            "--disable-features=DisableExtensionsExcept",
             "--disable-background-networking",
             "--disable-sync",
             "--disable-component-update",
@@ -2127,7 +2148,7 @@ class GoogleUltraAutomator:
         if self.vpn_ext_path and not parsed_proxy:
             extensions_to_load.append(self.vpn_ext_path)
 
-        injector_ext = os.path.join(BASE_DIR, "extensions", "g1_24_extension")
+        injector_ext = os.path.join(BASE_DIR, "extensions", "google_pro_6_12_24")
         if not os.path.isdir(injector_ext):
             injector_ext = os.path.join(BASE_DIR, "extensions", "google_pro_6_12_24")
         if os.path.isdir(injector_ext):

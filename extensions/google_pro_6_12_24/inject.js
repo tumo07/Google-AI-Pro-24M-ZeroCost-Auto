@@ -52,11 +52,20 @@
       if (!badge) {
         badge = document.createElement("div");
         badge.style.cssText = "position:fixed;right:14px;bottom:14px;z-index:2147483647;" +
-          "padding:8px 12px;border-radius:8px;font:12px/1.5 -apple-system,Segoe UI,Roboto,sans-serif;" +
-          "box-shadow:0 2px 10px rgba(0,0,0,.15);border:1px solid #d0d0d0;background:#fff;color:#333;max-width:280px;";
+          "padding:9px 14px;border-radius:10px;font:12px/1.5 -apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif;" +
+          "box-shadow:0 4px 16px rgba(0,0,0,.18);border:1.5px solid #2563eb;background:#fff;color:#1e293b;max-width:320px;cursor:pointer;";
+        badge.title = "Bấm để xem hướng dẫn chi tiết các bước tiếp theo";
+        badge.onclick = () => {
+          alert("💡 HƯỚNG DẪN KÍCH HOẠT GOOGLE AI PRO 24 THÁNG:\n\n" +
+                "1. Ưu đãi đã được nạp thành công vào trang web.\n" +
+                "2. Tìm thẻ 'Google AI Pro' trên màn hình và bấm nút 'Get discount'.\n" +
+                "3. Kiểm tra thanh bảo vệ trên cùng: XANH = Miễn phí US$0.00.\n" +
+                "4. Chọn thẻ thanh toán quốc tế (Mã ZIP 97201 Oregon) và bấm Đăng ký.\n" +
+                "5. Sau khi nhận đủ các tầng, vào play.google.com hủy gia hạn để khóa mốc 2028!");
+        };
         document.body.appendChild(badge);
       }
-      badge.textContent = text;
+      badge.innerHTML = text + " <span style=\"font-size:10px;color:#2563eb;text-decoration:underline;margin-left:4px;\">(Hướng dẫn)</span>";
       badge.style.background = color || "#fff";
     } catch (e) {}
   }
