@@ -1,0 +1,34 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+
+# Local configuration & credentials
+config.local.json
+*.priv
+release_key.priv
+*.pem
+
+# Browser profiles and sessions (Edge / Chrome)
+profiles/
+profiles/**
+Edge Wallet/
+test_chrome/
+
+# Logs & temp files
+*.log
+execution.log
+temp/
+artifacts/
+*.png
+*.jpg
+*.tmp
+
+# System
+.DS_Store
+Thumbs.db

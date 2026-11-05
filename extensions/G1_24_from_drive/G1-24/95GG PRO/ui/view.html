@@ -1,0 +1,640 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>95GG - Active PRO</title>
+<style>
+  /* Nhúng phông chữ chuẩn tiếng Việt Be Vietnam Pro */
+  @font-face {
+    font-family: 'Be Vietnam Pro';
+    font-style: normal;
+    font-weight: 500;
+    src: url('../assets/fonts/be-vietnam-pro-vietnamese-500.woff2') format('woff2');
+    unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
+  }
+  @font-face {
+    font-family: 'Be Vietnam Pro';
+    font-style: normal;
+    font-weight: 500;
+    src: url('../assets/fonts/be-vietnam-pro-latin-500.woff2') format('woff2');
+    unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+  }
+  @font-face {
+    font-family: 'Be Vietnam Pro';
+    font-style: normal;
+    font-weight: 700;
+    src: url('../assets/fonts/be-vietnam-pro-vietnamese-700.woff2') format('woff2');
+    unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
+  }
+  @font-face {
+    font-family: 'Be Vietnam Pro';
+    font-style: normal;
+    font-weight: 700;
+    src: url('../assets/fonts/be-vietnam-pro-latin-700.woff2') format('woff2');
+    unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+  }
+  @font-face {
+    font-family: 'Be Vietnam Pro';
+    font-style: normal;
+    font-weight: 800;
+    src: url('../assets/fonts/be-vietnam-pro-vietnamese-800.woff2') format('woff2');
+  }
+
+  :root {
+    --bg-page: #f7f3ea;
+    --bg-card: #ffffff;
+    --bg-subtle: #eee6d8;
+    --bg-selected: #fff8ee;
+    --ink-black: #1b1715;
+    --ink-dark: #2d2621;
+    --ink-body: #453b34;
+    --ink-muted: #6e5e53;
+    --border-main: #362e27;
+    --border-light: #d8cebf;
+    --copper: #c24d25;
+    --green-forest: #206239;
+    --green-bg: #eaf6ee;
+    --amber: #946400;
+    --amber-bg: #fdf5e6;
+    --red-alert: #b82b1d;
+  }
+
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    font-family: 'Be Vietnam Pro', Arial, Tahoma, sans-serif !important;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  body {
+    width: 380px;
+    background-color: var(--bg-page);
+    background-image: radial-gradient(#dcd2c3 1px, transparent 1px);
+    background-size: 16px 16px;
+    color: var(--ink-black);
+    padding: 14px 14px 12px;
+    user-select: none;
+    overflow-x: hidden;
+  }
+
+  /* Khung tiêu đề gọn gàng & chuyên nghiệp */
+  .masthead {
+    border: 2px solid var(--border-main);
+    background: #ffffff;
+    padding: 10px 14px;
+    box-shadow: 2px 2px 0 var(--border-main);
+    margin-bottom: 11px;
+  }
+  .masthead-main {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .masthead-main h1 {
+    font-size: 18px;
+    font-weight: 800;
+    letter-spacing: -0.3px;
+    color: var(--ink-black);
+  }
+  .status-pill {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 10.5px;
+    font-weight: 700;
+    padding: 3px 8px;
+    border-radius: 4px;
+    border: 1.5px solid var(--green-forest);
+    background: var(--green-bg);
+    color: var(--green-forest);
+  }
+  .status-pill.offline {
+    border-color: var(--amber);
+    background: var(--amber-bg);
+    color: var(--amber);
+  }
+  .status-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+    display: inline-block;
+  }
+
+  /* Chuyển đổi tab */
+  .vintage-tabs {
+    display: flex;
+    gap: 5px;
+    border-bottom: 2px solid var(--border-main);
+    margin-bottom: 11px;
+  }
+  .tab-item {
+    background: var(--bg-subtle);
+    border: 2px solid var(--border-main);
+    border-bottom: none;
+    border-radius: 5px 5px 0 0;
+    padding: 6px 12px;
+    font-size: 11.5px;
+    font-weight: 700;
+    color: var(--ink-muted);
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+  .tab-item.active {
+    background: #ffffff;
+    color: var(--ink-black);
+    margin-bottom: -2px;
+    padding-bottom: 8px;
+    border-top: 3px solid var(--copper);
+  }
+
+  .tab-pane {
+    display: none;
+  }
+  .tab-pane.active {
+    display: block;
+    animation: fadeIn 0.15s ease;
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(2px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* Bảng thông báo trạng thái */
+  .notice-bar {
+    border: 2px solid var(--border-main);
+    background: #ffffff;
+    padding: 8px 10px;
+    margin-bottom: 10px;
+    box-shadow: 2px 2px 0 var(--border-main);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .notice-bar.ok {
+    border-color: var(--green-forest);
+    background: var(--green-bg);
+    color: var(--green-forest);
+  }
+  .notice-bar.warn {
+    border-color: var(--amber);
+    background: var(--amber-bg);
+    color: var(--ink-black);
+  }
+  .notice-icon {
+    font-size: 15px;
+    flex-shrink: 0;
+  }
+  .notice-text {
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 1.4;
+  }
+
+  /* Tiêu đề danh mục */
+  .section-title {
+    display: flex;
+    justify-content: space-between;
+    font-size: 10.5px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--ink-muted);
+    margin-bottom: 7px;
+    padding: 0 2px;
+  }
+
+  /* Danh sách gói */
+  .package-list {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    margin-bottom: 11px;
+  }
+
+  .package-card {
+    background: #ffffff;
+    border: 2px solid var(--border-main);
+    border-radius: 5px;
+    padding: 8px 10px;
+    cursor: pointer;
+    box-shadow: 2px 2px 0 var(--border-main);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    transition: all 0.15s ease;
+  }
+  .package-card:hover {
+    background: #fffdf9;
+    transform: translate(-1px, -1px);
+    box-shadow: 3px 3px 0 var(--border-main);
+  }
+  .package-card.selected {
+    background: var(--bg-selected);
+    border-color: var(--copper);
+    box-shadow: 2px 2px 0 var(--copper);
+  }
+
+  .package-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .package-badge {
+    width: 24px;
+    height: 24px;
+    border: 2px solid var(--border-main);
+    border-radius: 4px;
+    background: var(--bg-subtle);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 800;
+    color: var(--ink-black);
+    flex-shrink: 0;
+  }
+  .package-card.selected .package-badge {
+    border-color: var(--copper);
+    background: var(--copper);
+    color: #ffffff;
+  }
+
+  .package-content h3 {
+    font-size: 12.5px;
+    font-weight: 700;
+    color: var(--ink-black);
+    line-height: 1.3;
+  }
+  .package-content p {
+    font-size: 10.5px;
+    font-weight: 500;
+    color: var(--ink-muted);
+    margin-top: 1px;
+  }
+  .package-card.selected .package-content p {
+    color: var(--copper);
+    font-weight: 700;
+  }
+
+  .package-tag {
+    font-size: 9.5px;
+    font-weight: 700;
+    padding: 3px 6px;
+    background: var(--bg-subtle);
+    border: 1px solid var(--border-light);
+    color: var(--ink-muted);
+    border-radius: 3px;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+  .package-card.selected .package-tag {
+    background: var(--copper);
+    border-color: var(--copper);
+    color: #ffffff;
+  }
+
+  /* Phím thao tác nhanh */
+  .action-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 7px;
+    margin-bottom: 10px;
+  }
+  .btn-vintage {
+    border: 2px solid var(--border-main);
+    background: #ffffff;
+    color: var(--ink-black);
+    font-size: 11.5px;
+    font-weight: 700;
+    padding: 8px 6px;
+    border-radius: 5px;
+    cursor: pointer;
+    box-shadow: 2px 2px 0 var(--border-main);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    transition: all 0.12s ease;
+  }
+  .btn-vintage:hover {
+    background: #fffdf9;
+    transform: translate(-1px, -1px);
+    box-shadow: 3px 3px 0 var(--border-main);
+  }
+  .btn-vintage:active {
+    transform: translate(1px, 1px);
+    box-shadow: 1px 1px 0 var(--border-main);
+  }
+  .btn-vintage.primary {
+    background: var(--copper);
+    color: #ffffff;
+    border-color: var(--border-main);
+  }
+  .btn-vintage.primary:hover {
+    background: #d4552b;
+  }
+
+  /* Tab 2: Hướng dẫn chi tiết */
+  .guide-box {
+    background: #ffffff;
+    border: 2px solid var(--border-main);
+    border-radius: 5px;
+    box-shadow: 2px 2px 0 var(--border-main);
+    padding: 10px 12px;
+    margin-bottom: 10px;
+  }
+  .guide-item {
+    display: flex;
+    gap: 10px;
+    padding-bottom: 8px;
+    margin-bottom: 8px;
+    border-bottom: 1px dashed var(--border-light);
+  }
+  .guide-item:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+    padding-bottom: 0;
+  }
+  .guide-step-no {
+    width: 20px;
+    height: 20px;
+    border-radius: 3px;
+    background: var(--copper);
+    color: #ffffff;
+    font-size: 11px;
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .guide-info h4 {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--ink-black);
+    margin-bottom: 2px;
+  }
+  .guide-info p {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--ink-body);
+    line-height: 1.4;
+  }
+  .guide-info b {
+    color: var(--copper);
+    font-weight: 700;
+  }
+
+  /* Nhận biết an toàn */
+  .safe-check-box {
+    border: 2px solid var(--border-main);
+    background: #ffffff;
+    padding: 8px 10px;
+    border-radius: 5px;
+    margin-bottom: 10px;
+    font-size: 10.5px;
+    font-weight: 700;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+  }
+  .safe-row {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+  }
+
+  /* Chân trang */
+  .footer-bar {
+    border-top: 1px solid var(--border-light);
+    padding-top: 7px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--ink-muted);
+  }
+  .footer-link {
+    color: var(--copper);
+    text-decoration: none;
+    font-weight: 700;
+    letter-spacing: 0.2px;
+    transition: all 0.15s ease;
+  }
+  .footer-link:hover {
+    text-decoration: underline;
+    color: #d4552b;
+  }
+  .footer-bar span:last-child {
+    font-weight: 800;
+    color: var(--ink-black);
+  }
+
+  /* Thông báo sao chép */
+  #toast {
+    position: fixed;
+    top: 12px;
+    left: 50%;
+    transform: translateX(-50%) translateY(-30px);
+    background: var(--ink-black);
+    color: #ffffff;
+    border: 2px solid var(--border-main);
+    font-size: 11px;
+    font-weight: 700;
+    padding: 6px 14px;
+    border-radius: 5px;
+    box-shadow: 2px 2px 0 var(--copper);
+    opacity: 0;
+    pointer-events: none;
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    z-index: 999;
+  }
+  #toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+</style>
+</head>
+<body>
+
+  <!-- Thông báo nổi -->
+  <div id="toast">Đã chép mã Zip miễn thuế: 97201</div>
+
+  <!-- Phần đầu trang Masthead sạch sẽ -->
+  <div class="masthead">
+    <div class="masthead-main">
+      <h1>95GG · Active PRO</h1>
+      <div id="hookIndicator" class="status-pill offline">
+        <span class="status-dot"></span>
+        <span id="hookText">CHƯA KẾT NỐI</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tab điều hướng -->
+  <div class="vintage-tabs">
+    <button class="tab-item active" data-tab="control">Chọn Gói Kích Hoạt</button>
+    <button class="tab-item" data-tab="guide">Hướng Dẫn Chi Tiết</button>
+  </div>
+
+  <!-- Tab 1: Bảng điều khiển gói -->
+  <div id="pane-control" class="tab-pane active">
+    
+    <!-- Thanh hiển thị trạng thái kết nối -->
+    <div id="state" class="notice-bar warn">
+      <div class="notice-icon" id="stateIcon">📢</div>
+      <div class="notice-text" id="stateText">Chưa mở trang bảng giá. Hãy vào one.google.com/plans rồi bấm F5 tải lại.</div>
+    </div>
+
+    <div class="section-title">
+      <span>DANH SÁCH GÓI ƯU ĐÃI</span>
+      <span style="color: var(--copper);">TỰ ĐỘNG LƯU</span>
+    </div>
+
+    <!-- Danh sách gói -->
+    <div class="package-list" id="tierContainer">
+      
+      <!-- Tắt -->
+      <div class="package-card" data-val="off">
+        <div class="package-left">
+          <div class="package-badge">✕</div>
+          <div class="package-content">
+            <h3>Tắt bộ tiêm kích hoạt</h3>
+            <p>Trở về gói và bảng giá mặc định</p>
+          </div>
+        </div>
+        <span class="package-tag">TẮT</span>
+      </div>
+
+      <!-- Gói 1: 12 tháng -->
+      <div class="package-card" data-val="12m">
+        <div class="package-left">
+          <div class="package-badge">1</div>
+          <div class="package-content">
+            <h3>Gói 1: Nhận 12 Tháng Đầu</h3>
+            <p>Đăng ký gói gốc ban đầu với giá $0.00</p>
+          </div>
+        </div>
+        <span class="package-tag">GÓI ĐẦU</span>
+      </div>
+
+      <!-- Gói 2: 6 tháng SS -->
+      <div class="package-card" data-val="6m_ss">
+        <div class="package-left">
+          <div class="package-badge">2</div>
+          <div class="package-content">
+            <h3>Gói 2: Cộng Thêm 6 Tháng (SS)</h3>
+            <p>Cộng dồn đè lên gói 1 → Nâng lên 18 Tháng</p>
+          </div>
+        </div>
+        <span class="package-tag">CỘNG DỒN</span>
+      </div>
+
+      <!-- Gói 3: 6 tháng Max -->
+      <div class="package-card" data-val="6m">
+        <div class="package-left">
+          <div class="package-badge">3</div>
+          <div class="package-content">
+            <h3>Gói 3: Cộng Tiếp 6 Tháng (Đủ 2 Năm)</h3>
+            <p>Khóa tối đa thời hạn 24 Tháng hoàn toàn miễn phí</p>
+          </div>
+        </div>
+        <span class="package-tag">CỘNG DỒN</span>
+      </div>
+
+      <!-- Gói 4: Dự phòng -->
+      <div class="package-card" data-val="6m_2">
+        <div class="package-left">
+          <div class="package-badge">4</div>
+          <div class="package-content">
+            <h3>Gói Phụ: 6 Tháng (Dự Phòng)</h3>
+            <p>Dùng để thay thế nếu Gói 2 hoặc Gói 3 bị lỗi</p>
+          </div>
+        </div>
+        <span class="package-tag">DỰ PHÒNG</span>
+      </div>
+
+    </div>
+
+    <!-- Phím chức năng nhanh -->
+    <div class="action-row">
+      <button class="btn-vintage primary" id="btnOpenPlans">
+        <span>Mở Trang Bảng Giá</span>
+      </button>
+      <button class="btn-vintage" id="btnCopyZip">
+        <span>Chép Zip US (97201)</span>
+      </button>
+    </div>
+
+  </div>
+
+  <!-- Tab 2: Hướng dẫn chi tiết -->
+  <div id="pane-guide" class="tab-pane">
+    <div class="guide-box">
+      <div class="guide-item">
+        <div class="guide-step-no">1</div>
+        <div class="guide-info">
+          <h4>Chuẩn bị tài khoản</h4>
+          <p>Đăng nhập sẵn tài khoản Google trên trình duyệt. Nhớ bật mạng hoặc VPN định vị tại <b>Hoa Kỳ (US)</b>.</p>
+        </div>
+      </div>
+
+      <div class="guide-item">
+        <div class="guide-step-no">2</div>
+        <div class="guide-info">
+          <h4>Chọn gói & Tải lại trang</h4>
+          <p>Chọn <b>Gói 1 (12 Tháng)</b> ở tab bên cạnh → Tải lại trang Google One (F5) → Thấy góc dưới phải hiện chữ xanh <b>«95GG Active PRO»</b> là thành công.</p>
+        </div>
+      </div>
+
+      <div class="guide-item">
+        <div class="guide-step-no">3</div>
+        <div class="guide-info">
+          <h4>Xem giá & Điền thẻ</h4>
+          <p>Bấm nút <b>Nhận ưu đãi (Get discount)</b>. Nhìn thanh báo trên đầu màn hình: Hiện <b>XANH LÁ ($0.00)</b> mới điền thẻ (Dùng mã bưu chính <b>97201</b> để miễn thuế).</p>
+        </div>
+      </div>
+
+      <div class="guide-item">
+        <div class="guide-step-no">4</div>
+        <div class="guide-info">
+          <h4>Cộng dồn thành 2 năm</h4>
+          <p>Sau khi xong Gói 1, mở lại tiện ích này chọn tiếp <b>Gói 2</b> → F5 trang rồi đăng ký tiếp. Làm tương tự cho <b>Gói 3</b> để đủ trọn 24 tháng.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Nhận biết an toàn -->
+    <div class="safe-check-box">
+      <div class="safe-row">
+        <span style="color: var(--green-forest); font-size: 14px;">🟢</span>
+        <span><b>THANH XANH LÁ:</b> Báo giá $0.00 (Miễn phí) → An tâm bấm Đăng ký.</span>
+      </div>
+      <div class="safe-row">
+        <span style="color: var(--red-alert); font-size: 14px;">🔴</span>
+        <span><b>THANH MÀU ĐỎ:</b> Báo có trừ tiền thật → Tuyệt đối không bấm, đổi gói khác.</span>
+      </div>
+    </div>
+
+    <div class="action-row">
+      <button class="btn-vintage" id="btnCancelSub" style="grid-column: span 2;">
+        <span>Quản Lý & Hủy Tự Động Trừ Tiền Play</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Chân trang -->
+  <div class="footer-bar">
+    <a href="#" id="footerLink" target="_blank" class="footer-link"></a>
+    <span id="versionLabel"></span>
+  </div>
+
+  <script src="controller.js"></script>
+</body>
+</html>

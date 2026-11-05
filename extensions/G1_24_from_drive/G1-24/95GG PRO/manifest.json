@@ -1,0 +1,76 @@
+{
+  "manifest_version": 3,
+  "name": "95GG - Active PRO",
+  "short_name": "95GG PRO",
+  "version": "1.0.0",
+  "description": "Kích hoạt gói Google One / AI Pro 2 năm tự động",
+  "author": "95GG Team",
+  "minimum_chrome_version": "102",
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAuwhwLGunG5JAgOOevXSLeCaj3VsQX3q25bwDUlGTrtup3h+vhORGvUKchXlhr6CYZ1Kolocc5crM+y60MHhEr4UF+VHUwxSH+oyS/fdNURXw0/rFA5k+UAhTw5/0z95x4WIztyoo77gGNM5ut2h3W7mCN5OB5dFeS6P3jvVp95v/V4IIhkNL8jTsCHaDRAOj48ECSJ0ykrlX4I0vWPAdhkvjkabaWGFYkxJPmtssbKgjx7me7MCjLLXrff4bF4BszII/BgU9DryPk8emlRra1G0a8oL8Oibgdp15kwCOl0EUbnIVQLODSBseE9ze/v2zUauTDQf2agfoi0RiVJra3QIDAQAB",
+  "permissions": [
+    "storage"
+  ],
+  "host_permissions": [
+    "https://one.google.com/*",
+    "https://tokenized.play.google.com/*",
+    "https://play.google.com/*"
+  ],
+  "action": {
+    "default_popup": "ui/view.html",
+    "default_title": "95GG - Active PRO",
+    "default_icon": {
+      "16": "assets/icons/16.png",
+      "48": "assets/icons/48.png",
+      "128": "assets/icons/128.png"
+    }
+  },
+  "icons": {
+    "16": "assets/icons/16.png",
+    "48": "assets/icons/48.png",
+    "128": "assets/icons/128.png"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://one.google.com/*"
+      ],
+      "js": [
+        "core/bridge.js"
+      ],
+      "run_at": "document_start",
+      "all_frames": false
+    },
+    {
+      "matches": [
+        "https://one.google.com/*"
+      ],
+      "js": [
+        "core/engine.js"
+      ],
+      "run_at": "document_start",
+      "world": "MAIN",
+      "all_frames": false
+    },
+    {
+      "matches": [
+        "https://tokenized.play.google.com/*"
+      ],
+      "js": [
+        "core/validator.js"
+      ],
+      "run_at": "document_idle",
+      "world": "MAIN",
+      "all_frames": true
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "assets/fonts/*"
+      ],
+      "matches": [
+        "<all_urls>"
+      ]
+    }
+  ]
+}

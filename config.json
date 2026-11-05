@@ -1,0 +1,32 @@
+{
+  "target_region": "US",
+  "target_plan": "pro_2year_zero",
+  "auto_cancel": true,
+  "proxy_template": "",
+  "use_vpn": true,
+  "card": {
+    "number": "4000000000000000",
+    "exp_month": "12",
+    "exp_year": "28",
+    "cvc": "000",
+    "holder": "CARDHOLDER NAME",
+    "address_line1": "700 SW 5th Ave",
+    "address_line2": "",
+    "postal_code": "97201",
+    "locality": "Portland",
+    "province": "OR",
+    "country": "US"
+  },
+  "accounts": [
+    {
+      "id": "Account_1",
+      "email": "your_account@gmail.com",
+      "password": "",
+      "recovery_email": "",
+      "totp_secret": "",
+      "proxy": "",
+      "status": "pending_login",
+      "current_step": 0
+    }
+  ]
+}
