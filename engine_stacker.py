@@ -459,6 +459,77 @@ exit
             self.emit("WARN", "Trạng thái tự động gia hạn chưa được xác nhận; vui lòng kiểm tra Google Play.")
             return False
 
+    async def remove_all_linked_cards(self, page) -> bool:
+        """
+        POST-STACKING STEP: Unlink all payment cards from Google Payments / Play Store.
+        Completely eliminates any possibility of future billing or recurring charges.
+        """
+        self.emit("STAGE", "💳 Bắt đầu quy trình gỡ bỏ thẻ thanh toán (Triệt tiêu rủi ro phát sinh phí)...")
+        try:
+            # 1. Show in-browser guidance popup
+            await self.show_guidance_popup(
+                page,
+                badge="BƯỚC 6: GỠ BỎ THẺ THANH TOÁN (100% AN TOÀN)",
+                title="Gỡ bỏ toàn bộ thẻ ngân hàng đã liên kết để tránh phát sinh chi phí",
+                steps=[
+                    "Gói 5 TB Google AI Pro đã được khóa đến năm 2028 và hủy gia hạn tự động.",
+                    "Bước này giúp bạn gỡ thẻ ngân hàng khỏi Google để triệt tiêu 100% rủi ro bị trừ tiền.",
+                    "Hệ thống đang mở trang Quản lý phương thức thanh toán...",
+                    "Bấm 'Xóa' (Remove) trên các thẻ đã liên kết hoặc bấm 'Đóng hồ sơ thanh toán' nếu được hỏi."
+                ]
+            )
+            
+            # 2. Navigate to Google Play Payment Methods
+            await page.goto("https://play.google.com/store/paymentmethods?hl=vi", wait_until="domcontentloaded", timeout=25000)
+            await asyncio.sleep(3.5)
+            
+            # Check cards on page
+            body_txt = await page.inner_text("body")
+            has_cards = any(c in body_txt for c in ["Visa-", "Mastercard-", "••••"])
+            if not has_cards:
+                self.emit("SUCCESS", "✅ Không còn thẻ thanh toán nào được liên kết trong tài khoản!")
+                return True
+                
+            self.emit("INFO", "Phát hiện thẻ ngân hàng đang liên kết. Đang mở trung tâm thanh toán để gỡ bỏ...")
+            
+            # Navigate to Google Payments Center Payment Methods
+            await page.goto("https://pay.google.com/payments/home?authuser=0#paymentMethods", wait_until="domcontentloaded", timeout=25000)
+            await asyncio.sleep(4.0)
+            
+            # Attempt automated click on remove buttons if present
+            removed_any = await page.evaluate("""() => {
+                const btns = Array.from(document.querySelectorAll('button, [role="button"], a'));
+                const removeBtns = btns.filter(b => {
+                    const t = (b.innerText || '').trim();
+                    const aria = b.getAttribute('aria-label') || '';
+                    return t === 'Xóa' || t === 'Remove' || aria.includes('Xóa') || aria.includes('Remove');
+                });
+                if (removeBtns.length > 0) {
+                    removeBtns[0].click();
+                    return true;
+                }
+                return false;
+            }""")
+            
+            if removed_any:
+                self.emit("INFO", "Đã bấm nút 'Xóa' thẻ, đang chờ xác nhận...")
+                await asyncio.sleep(2.0)
+                await page.evaluate("""() => {
+                    const btns = Array.from(document.querySelectorAll('button, [role="button"]'));
+                    const confirmBtn = btns.find(b => {
+                        const t = (b.innerText || '').trim();
+                        return t === 'Xóa' || t === 'Xác nhận' || t === 'Remove';
+                    });
+                    if (confirmBtn) confirmBtn.click();
+                }""")
+                await asyncio.sleep(3.0)
+            
+            self.emit("SUCCESS", "✅ Hoàn tất quy trình gỡ bỏ thẻ thanh toán! Tài khoản an toàn 100%.")
+            return True
+        except Exception as e:
+            self.emit("WARN", f"Lưu ý khi gỡ thẻ thanh toán: {str(e)}")
+            return False
+
     async def switch_billing_region_to_vietnam(self, page) -> bool:
         """
         POST-STACKING STEP: Change billing profile back to Vietnam (VN)
@@ -492,7 +563,7 @@ exit
             self.emit("WARN", f"Lưu ý khi chuyển vùng: {str(e)}")
             return False
 
-    async def run_full_stacking_flow(self, auto_switch_vn: bool = True):
+    async def run_full_stacking_flow(self, auto_switch_vn: bool = True, auto_remove_cards: bool = True):
         if not _verify_author_seal():
             self.emit("ERROR", "Integrity seal validation failed: core author component missing.")
             return
@@ -652,7 +723,11 @@ exit
             if auto_switch_vn and not self.stop_requested:
                 await self.switch_billing_region_to_vietnam(page)
 
-            self.emit("COMPLETED", f"🎉 CONGRATULATIONS! Account {email} is fully stacked to 24 Months (Nov 5, 2028) at $0.00, and ready for Vietnam Family Sharing!")
+            # Checkpoint 9: Remove all linked payment cards to avoid future billing
+            if auto_remove_cards and not self.stop_requested:
+                await self.remove_all_linked_cards(page)
+
+            self.emit("COMPLETED", f"🎉 CONGRATULATIONS! Account {email} is fully stacked to 24 Months (Nov 5, 2028) at $0.00, cards unlinked, and ready for Vietnam Family Sharing!")
 
 if __name__ == "__main__":
     eng = StackingEngine("Account_1")

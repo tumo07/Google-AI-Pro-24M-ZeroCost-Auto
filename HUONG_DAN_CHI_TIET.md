@@ -70,3 +70,10 @@ Quan sát biểu ngữ (banner) ở đầu cửa sổ thanh toán:
 - Chọn gói **Google One (Google AI Pro + YouTube Premium Add On)** $\rightarrow$ Chọn **Quản lý (Manage)**.
 - Nhấn **Hủy gói thuê bao (Cancel subscription)** $\rightarrow$ Chọn lý do bất kỳ (hoặc *Từ chối trả lời*) $\rightarrow$ Xác nhận **Hủy gói**.
 - **Kết quả hiển thị:** Trạng thái chuyển sang **`Đã hủy`**, quyền lợi vẫn được giữ nguyên đầy đủ tới ngày hết hạn và thẻ ngân hàng sẽ **không bao giờ bị trừ tiền**.
+
+### Bước 8: Gỡ bỏ thẻ thanh toán (Triệt tiêu 100% rủi ro tài chính)
+- Truy cập trang phương thức thanh toán: [play.google.com/store/paymentmethods](https://play.google.com/store/paymentmethods) hoặc [pay.google.com](https://pay.google.com/).
+- Bấm **Chỉnh sửa phương thức thanh toán (Edit payment methods)**.
+- Bấm **Xóa (Remove)** trên các thẻ Visa / Mastercard đã liên kết.
+- **Hoặc đóng hồ sơ thanh toán Mỹ tạm thời:** Tại [payments.google.com/gp/w/u/0/home/settings](https://payments.google.com/gp/w/u/0/home/settings), kéo xuống chọn **Đóng hồ sơ thanh toán (Close payments profile)**.
+- **Tác dụng tuyệt đối:** Khi không còn phương thức thanh toán nào lưu trên hệ thống, Google **hoàn toàn không thể trừ bất kỳ chi phí nào**, trong khi gói 5 TB Google AI Pro vẫn được bảo lưu trọn vẹn quyền lợi đến năm 2028!

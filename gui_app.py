@@ -420,12 +420,13 @@ class Windows11StackerApp(ctk.CTk):
         self.btn_stack.configure(state="disabled")
         self.btn_stop.configure(state="normal")
         auto_vn = bool(self.chk_auto_vn.get())
+        auto_cards = bool(self.chk_auto_remove_cards.get())
         self.append_log("STAGE", f"Bắt đầu chu trình tự động 24 tháng cho [{self.active_account_id}] (Tự đổi vùng VN: {auto_vn})...")
 
         def _worker():
             try:
                 self.engine = engine_stacker.StackingEngine(self.active_account_id, on_event=self._on_engine_event)
-                asyncio.run(self.engine.run_full_stacking_flow(auto_switch_vn=auto_vn))
+                asyncio.run(self.engine.run_full_stacking_flow(auto_switch_vn=auto_vn, auto_remove_cards=auto_cards))
             except Exception as e:
                 self._on_engine_event("ERROR", f"Lỗi thực thi: {str(e)}")
             finally:

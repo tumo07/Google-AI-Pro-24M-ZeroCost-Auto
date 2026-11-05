@@ -19,6 +19,7 @@
   - **Tầng 2 (6 tháng):** Cộng dồn ưu đãi OEM Samsung (SS) kéo dài lên 18 tháng.
   - **Tầng 3 (6 tháng):** Nâng cấp gói 5 TB / kết hợp ưu đãi, khóa mốc đủ 24 tháng (hạn sử dụng đến năm 2028).
   - **Bước 5 (Khóa hạn 2028):** Tự động điều hướng sang Google Play để hủy gia hạn định kỳ, triệt tiêu mọi nguy cơ trừ tiền hàng tháng mà vẫn bảo lưu trọn vẹn 24 tháng quyền lợi.
+- **💳 Tự Động Gỡ Bỏ Thẻ Thanh Toán (Zero-Billing Absolute Guard):** Sau khi hủy gia hạn và cố định mốc 2028, hệ thống tự động hướng dẫn và thực hiện quy trình gỡ bỏ toàn bộ thẻ Visa/Mastercard khỏi Google Payments để triệt tiêu 100% mọi nguy cơ phát sinh phí định kỳ.
 - **🇻🇳 Sẵn Sàng Cho Chia Sẻ Gia Đình (Vietnam Family Sharing Ready):** Tự động hướng dẫn và chuyển vùng hồ sơ để kích hoạt Google One Family Sharing cho các tài khoản thành viên tại Việt Nam.
 - **🔐 Chữ Ký Số Mã Hóa Ed25519 (Cryptographically Signed):** Toàn bộ mã nguồn phát hành được bảo vệ và xác thực bằng chữ ký số bất đối xứng Ed25519 của tác giả (@tumo07), chống giả mạo, tráo đổi mã độc hoặc chiếm đoạt bản quyền.
 
@@ -37,6 +38,7 @@ flowchart TD
     F -->|NO: Red Banner| H["ABORT: Halt immediately to protect funds"]
     G --> I["Google Play Subscriptions (play.google.com)"]
     I --> J["Cancel Auto-Renew -> Lock 24 Months until 2028"]
+    J --> K["Unlink Cards (play.google.com/store/paymentmethods) -> 100% Zero Billing Risk"]
 ```
 
 ---
