@@ -18,26 +18,31 @@ permissions:
 
 jobs:
   build-macos-dmg:
-    name: Build macOS Drag-to-Applications DMG Packages
+    name: Build macOS Universal2, Intel (x86_64) & Apple Silicon (arm64) Standalone DMGs
     runs-on: macos-latest
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Set up Python 3.11
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-
-      - name: Install Dependencies
+      - name: Install Rosetta 2 & Official Python.org 3.11 Universal2 Framework (with built-in Tcl/Tk)
         run: |
-          python3 -m pip install --upgrade pip
-          pip3 install -r requirements.txt
-          pip3 install pyinstaller
+          sudo softwareupdate --install-rosetta --agree-to-license || true
+          curl -L -o /tmp/python-3.11.9-macos11.pkg "https://www.python.org/ftp/python/3.11.9/python-3.11.9-macos11.pkg"
+          sudo installer -pkg /tmp/python-3.11.9-macos11.pkg -target /
+          /Library/Frameworks/Python.framework/Versions/3.11/bin/python3 --version
+          lipo -archs /Library/Frameworks/Python.framework/Versions/3.11/bin/python3
 
-      - name: Build Standalone macOS .app Bundle (Apple Silicon Native)
+      - name: Build Native Intel (x86_64) Standalone .app (MacBook Air 2018 / Intel Sonoma+)
         run: |
-          pyinstaller --noconfirm --noconsole --onedir --windowed \
+          PY_UNIV="/Library/Frameworks/Python.framework/Versions/3.11/bin/python3"
+          arch -x86_64 "$PY_UNIV" -m venv /tmp/venv_x86_64
+          arch -x86_64 /tmp/venv_x86_64/bin/python -m pip install --upgrade pip
+          arch -x86_64 /tmp/venv_x86_64/bin/pip install --only-binary=:all: -r requirements.txt pyinstaller
+
+          arch -x86_64 /tmp/venv_x86_64/bin/pyinstaller --noconfirm --noconsole --onedir --windowed \
+            --distpath dist_x86_64 \
+            --workpath build_x86_64 \
+            --specpath spec_x86_64 \
             --name "Google AI Pro Automator" \
             --osx-bundle-identifier "vn.io.tumo07.googleaiproautomator" \
             --add-data "extensions:extensions" \
@@ -52,62 +57,146 @@ jobs:
             --hidden-import "automation_engine" \
             gui_app.py
 
-          # Ad-hoc sign the .app bundle so macOS Gatekeeper sees a valid bundle structure
-          codesign --force --deep --sign - "dist/Google AI Pro Automator.app"
+          file "dist_x86_64/Google AI Pro Automator.app/Contents/MacOS/Google AI Pro Automator"
+          codesign --force --deep --sign - "dist_x86_64/Google AI Pro Automator.app"
 
-      - name: Package Drag-to-Applications Apple Silicon DMG
+      - name: Build Native Apple Silicon (arm64) Standalone .app (M1/M2/M3/M4)
         run: |
-          mkdir -p dist/dmg_arm64
-          cp -R "dist/Google AI Pro Automator.app" dist/dmg_arm64/
-          ln -s /Applications dist/dmg_arm64/Applications
+          PY_UNIV="/Library/Frameworks/Python.framework/Versions/3.11/bin/python3"
+          arch -arm64 "$PY_UNIV" -m venv /tmp/venv_arm64
+          arch -arm64 /tmp/venv_arm64/bin/python -m pip install --upgrade pip
+          arch -arm64 /tmp/venv_arm64/bin/pip install --only-binary=:all: -r requirements.txt pyinstaller
 
-          hdiutil create -volname "Google AI Pro Automator" \
-            -srcfolder dist/dmg_arm64 \
-            -ov -format UDZO \
-            "dist/GoogleAIProAutomator-v1.3.1-macOS-AppleSilicon.dmg"
+          arch -arm64 /tmp/venv_arm64/bin/pyinstaller --noconfirm --noconsole --onedir --windowed \
+            --distpath dist_arm64 \
+            --workpath build_arm64 \
+            --specpath spec_arm64 \
+            --name "Google AI Pro Automator" \
+            --osx-bundle-identifier "vn.io.tumo07.googleaiproautomator" \
+            --add-data "extensions:extensions" \
+            --add-data "config.example.json:." \
+            --add-data "README.md:." \
+            --add-data "LICENSE:." \
+            --collect-all customtkinter \
+            --collect-all cryptography \
+            --collect-all playwright \
+            --hidden-import "ensure_env" \
+            --hidden-import "engine_stacker" \
+            --hidden-import "automation_engine" \
+            gui_app.py
 
-      - name: Package Drag-to-Applications Universal & Intel DMG
+          file "dist_arm64/Google AI Pro Automator.app/Contents/MacOS/Google AI Pro Automator"
+          codesign --force --deep --sign - "dist_arm64/Google AI Pro Automator.app"
+
+      - name: Fuse Universal2 (x86_64 + arm64 Fat Binary) Standalone .app Bundle
         run: |
-          mkdir -p dist/dmg_universal
-          cp -R "Google AI Pro Automator.app" dist/dmg_universal/
+          mkdir -p dist_universal
+          cp -R "dist_x86_64/Google AI Pro Automator.app" "dist_universal/Google AI Pro Automator.app"
 
-          # Embed full self-contained payload inside Google AI Pro Automator.app/Contents/Resources/app
-          RES_APP="dist/dmg_universal/Google AI Pro Automator.app/Contents/Resources/app"
-          mkdir -p "$RES_APP"
-          cp -R extensions "$RES_APP/"
-          cp -R tools "$RES_APP/"
-          cp config.example.json "$RES_APP/"
-          if [ -f config.json ]; then cp config.json "$RES_APP/"; fi
-          cp requirements.txt "$RES_APP/"
-          cp *.py "$RES_APP/"
-          cp *.sh "$RES_APP/"
-          cp *.command "$RES_APP/"
+          python3 - << 'EOF'
+          import os, subprocess, shutil
 
-          chmod +x "dist/dmg_universal/Google AI Pro Automator.app/Contents/MacOS/launcher"
-          chmod +x "$RES_APP"/*.command "$RES_APP"/*.sh 2>/dev/null || true
+          x86_root = "dist_x86_64/Google AI Pro Automator.app"
+          arm_root = "dist_arm64/Google AI Pro Automator.app"
+          uni_root = "dist_universal/Google AI Pro Automator.app"
 
-          # Ad-hoc sign the self-contained .app bundle
-          codesign --force --deep --sign - "dist/dmg_universal/Google AI Pro Automator.app" || true
+          def get_archs(path):
+              if os.path.islink(path) or not os.path.isfile(path):
+                  return []
+              r = subprocess.run(["lipo", "-archs", path], capture_output=True, text=True)
+              if r.returncode == 0 and r.stdout.strip():
+                  return r.stdout.strip().split()
+              return []
 
-          # Create only the .app and /Applications shortcut in the DMG root
-          ln -s /Applications dist/dmg_universal/Applications
+          merged_count = 0
+          for dirpath, dirnames, filenames in os.walk(uni_root):
+              rel_dir = os.path.relpath(dirpath, uni_root)
+              for fn in filenames:
+                  uni_p = os.path.join(dirpath, fn)
+                  if os.path.islink(uni_p):
+                      continue
+                  x86_p = os.path.join(x86_root, rel_dir, fn)
+                  arm_p = os.path.join(arm_root, rel_dir, fn)
+                  if not os.path.exists(arm_p) or os.path.islink(arm_p):
+                      continue
+                  a_x86 = get_archs(x86_p)
+                  a_arm = get_archs(arm_p)
+                  if a_x86 and a_arm:
+                      combined = set(a_x86) | set(a_arm)
+                      if "x86_64" in combined and "arm64" in combined and len(a_x86) == 1 and len(a_arm) == 1:
+                          subprocess.run(["lipo", "-create", x86_p, arm_p, "-output", uni_p], check=True)
+                          merged_count += 1
+          print(f"[+] Merged {merged_count} Mach-O binaries into Universal2 (x86_64 + arm64) fat binaries!")
+          EOF
 
-          hdiutil create -volname "Google AI Pro Automator" \
-            -srcfolder dist/dmg_universal \
-            -ov -format UDZO \
-            "dist/GoogleAIProAutomator-v1.3.1-macOS-Universal.dmg"
+          file "dist_universal/Google AI Pro Automator.app/Contents/MacOS/Google AI Pro Automator"
+          lipo -archs "dist_universal/Google AI Pro Automator.app/Contents/MacOS/Google AI Pro Automator"
+          codesign --force --deep --sign - "dist_universal/Google AI Pro Automator.app"
 
-          cp "dist/GoogleAIProAutomator-v1.3.1-macOS-Universal.dmg" \
-             "dist/GoogleAIProAutomator-v1.3.1-macOS-Intel.dmg"
+      - name: Smoke-Test Both x86_64 (Intel) and arm64 (Apple Silicon) Executables
+        run: |
+          arch -x86_64 "dist_x86_64/Google AI Pro Automator.app/Contents/MacOS/Google AI Pro Automator" -m pip
+          arch -arm64 "dist_arm64/Google AI Pro Automator.app/Contents/MacOS/Google AI Pro Automator" -m pip
+          arch -x86_64 "dist_universal/Google AI Pro Automator.app/Contents/MacOS/Google AI Pro Automator" -m pip
+          arch -arm64 "dist_universal/Google AI Pro Automator.app/Contents/MacOS/Google AI Pro Automator" -m pip
+          echo "[OK] Both x86_64 and arm64 native binaries verified!"
 
-          ls -lh dist/*.dmg
+      - name: Package Drag-to-Applications DMGs & Universal ZIP
+        run: |
+          mkdir -p out_dmg
 
-      - name: Upload All DMG Packages to GitHub Release v1.3.1
+          create_gatekeeper_helper() {
+            local target_dir="$1"
+            cat << 'HELPER' > "$target_dir/Mo_Khoa_Gatekeeper_Neu_Bi_Chan.command"
+          #!/bin/bash
+          echo "=================================================================="
+          echo "  Google AI Pro Automator — Gỡ chặn macOS Gatekeeper (Sonoma/Sequoia)"
+          echo "=================================================================="
+          if [ -d "/Applications/Google AI Pro Automator.app" ]; then
+              xattr -cr "/Applications/Google AI Pro Automator.app" 2>/dev/null || true
+              codesign --force --deep --sign - "/Applications/Google AI Pro Automator.app" 2>/dev/null || true
+              echo "[OK] Đã mở khóa! Đang khởi chạy ứng dụng..."
+              open "/Applications/Google AI Pro Automator.app"
+          else
+              echo "[!] Vui lòng kéo 'Google AI Pro Automator.app' vào thư mục 'Applications' trước!"
+          fi
+          HELPER
+            chmod +x "$target_dir/Mo_Khoa_Gatekeeper_Neu_Bi_Chan.command"
+          }
+
+          # 1. Intel (x86_64) DMG (MacBook Air 2018 / Intel Macs)
+          mkdir -p stage_intel
+          cp -R "dist_x86_64/Google AI Pro Automator.app" stage_intel/
+          ln -s /Applications stage_intel/Applications
+          create_gatekeeper_helper stage_intel
+          hdiutil create -volname "Google AI Pro Automator" -srcfolder stage_intel -ov -format UDZO "out_dmg/GoogleAIProAutomator-v1.3.1-macOS-Intel.dmg"
+
+          # 2. Apple Silicon (arm64) DMG (M1/M2/M3/M4 Macs)
+          mkdir -p stage_arm64
+          cp -R "dist_arm64/Google AI Pro Automator.app" stage_arm64/
+          ln -s /Applications stage_arm64/Applications
+          create_gatekeeper_helper stage_arm64
+          hdiutil create -volname "Google AI Pro Automator" -srcfolder stage_arm64 -ov -format UDZO "out_dmg/GoogleAIProAutomator-v1.3.1-macOS-AppleSilicon.dmg"
+
+          # 3. Universal2 (x86_64 + arm64 Fat Binary) DMG (Works on ALL Intel & Apple Silicon Macs)
+          mkdir -p stage_univ
+          cp -R "dist_universal/Google AI Pro Automator.app" stage_univ/
+          ln -s /Applications stage_univ/Applications
+          create_gatekeeper_helper stage_univ
+          hdiutil create -volname "Google AI Pro Automator" -srcfolder stage_univ -ov -format UDZO "out_dmg/GoogleAIProAutomator-v1.3.1-macOS-Universal.dmg"
+
+          # 4. Universal2 Standalone ZIP (ditto preserves symlinks, POSIX 0755 permissions, and bundle structure)
+          ditto -c -k --sequesterRsrc --keepParent "dist_universal/Google AI Pro Automator.app" "out_dmg/Google-AI-Pro-Automator-v1.3.1-macOS-Universal.zip"
+
+          ls -lh out_dmg/
+
+      - name: Upload All macOS Packages to GitHub Release v1.3.1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh release upload v1.3.1 \
-            "dist/GoogleAIProAutomator-v1.3.1-macOS-AppleSilicon.dmg" \
-            "dist/GoogleAIProAutomator-v1.3.1-macOS-Universal.dmg" \
-            "dist/GoogleAIProAutomator-v1.3.1-macOS-Intel.dmg" \
+            "out_dmg/GoogleAIProAutomator-v1.3.1-macOS-Intel.dmg" \
+            "out_dmg/GoogleAIProAutomator-v1.3.1-macOS-AppleSilicon.dmg" \
+            "out_dmg/GoogleAIProAutomator-v1.3.1-macOS-Universal.dmg" \
+            "out_dmg/Google-AI-Pro-Automator-v1.3.1-macOS-Universal.zip" \
             --clobber

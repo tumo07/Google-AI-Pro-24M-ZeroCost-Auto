@@ -27,6 +27,23 @@ if __name__ == "__main__":
 if getattr(sys, "frozen", False) and any(arg in ("-m", "pip", "playwright") for arg in sys.argv[1:]):
     os._exit(0)
 
+# Redirect stdout/stderr safely when launched from macOS Finder / Windows GUI without a console
+if sys.stdout is None or sys.stderr is None or (sys.platform == "darwin" and getattr(sys, "frozen", False)):
+    try:
+        _log_dir = (
+            os.path.expanduser("~/Library/Application Support/GoogleAIProAutomator")
+            if sys.platform == "darwin"
+            else os.path.dirname(sys.executable)
+        )
+        os.makedirs(_log_dir, exist_ok=True)
+        _log_fh = open(os.path.join(_log_dir, "app_startup.log"), "a", encoding="utf-8", buffering=1)
+        if sys.stdout is None or getattr(sys, "frozen", False):
+            sys.stdout = _log_fh
+        if sys.stderr is None or getattr(sys, "frozen", False):
+            sys.stderr = _log_fh
+    except Exception:
+        pass
+
 _instance_lock_handle = None
 
 def ensure_single_instance():
@@ -119,8 +136,8 @@ ARCH = platform.machine().lower()
 
 if IS_MAC:
     OS_DESC = f"🍎 macOS ({'Apple Silicon ' + ARCH if 'arm' in ARCH or 'aarch' in ARCH else 'Intel ' + ARCH})"
-    FONT_HEADING = "SF Pro Display"
-    FONT_BODY = "SF Pro Text"
+    FONT_HEADING = "Helvetica Neue"
+    FONT_BODY = "Helvetica Neue"
 elif IS_WIN:
     OS_DESC = f"🪟 Windows ({ARCH})"
     FONT_HEADING = "Segoe UI Variable Display"
