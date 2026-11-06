@@ -28,6 +28,7 @@ import asyncio
 import subprocess
 import platform
 import signal
+import socket
 from typing import Optional, Dict, Any
 
 import customtkinter as ctk
@@ -535,25 +536,22 @@ class UniversalStackerApp(ctk.CTk):
                 break
         self.append_log("INFO", f"Đã tạo phiên mới: [{new_id}]. Bấm 'Bật cửa sổ đăng nhập' để nhập Gmail mới.")
 
+_instance_lock_socket = None
+
 def ensure_single_instance():
-    curr_pid = os.getpid()
-    if sys.platform == "win32":
-        try:
-            cmd = f'powershell -Command "Get-CimInstance Win32_Process | Where-Object {{ $_.ProcessId -ne {curr_pid} -and $_.CommandLine -like '*gui_app.py*' }} | ForEach-Object {{ Stop-Process -Id $_.ProcessId -Force }}"'
-            subprocess.run(cmd, shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        except Exception:
-            pass
-    else:
-        try:
-            out = subprocess.check_output("pgrep -f gui_app.py", shell=True, text=True)
-            for p in out.split():
-                if p.strip() and int(p.strip()) != curr_pid:
-                    try:
-                        os.kill(int(p.strip()), signal.SIGTERM)
-                    except Exception:
-                        pass
-        except Exception:
-            pass
+    """
+    Pure Python socket lock. Does not rely on PowerShell, taskkill, or external shells.
+    Completely immune to 0x80070005 (Access Denied) errors on restricted Windows environments.
+    """
+    global _instance_lock_socket
+    try:
+        _instance_lock_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        _instance_lock_socket.bind(("127.0.0.1", 49832))
+        _instance_lock_socket.listen(1)
+        return True
+    except OSError:
+        print("[INFO] Một phiên bản của ứng dụng đang chạy.")
+        sys.exit(0)
 
 def run_app():
     ensure_single_instance()

@@ -1,18 +1,28 @@
 @echo off
 chcp 65001 >nul
-title Google AI Pro 24-Month Automator - Windows 11 Fluent App
+title Google AI Pro 24-Month Automator
 cd /d "%~dp0"
 
 echo ======================================================================
-echo   GOOGLE AI PRO 24-MONTH AUTOMATOR (WINDOWS 11 FLUENT APP)
+echo   GOOGLE AI PRO 24-MONTH AUTOMATOR (UNIVERSAL APP)
 echo ======================================================================
-echo Dang khoi dong giao dien Windows 11 Fluent Design...
+echo Dang kiem tra va khoi dong giao dien...
 echo.
 
-"C:\Users\khoa\AppData\Local\Microsoft\WindowsApps\python.exe" gui_app.py
-
-if %errorlevel% neq 0 (
-    echo.
-    echo Phat hien loi khi chay GUI!
-    pause
+where python >nul 2>nul
+if %errorlevel% equ 0 (
+    python gui_app.py
+    goto end
 )
+
+where py >nul 2>nul
+if %errorlevel% equ 0 (
+    py gui_app.py
+    goto end
+)
+
+echo [LOI] Khong tim thay Python tren he thong!
+echo Vui long cai dat Python 3.10+ tu https://www.python.org/ va nho tich "Add Python to PATH"
+pause
+
+:end
