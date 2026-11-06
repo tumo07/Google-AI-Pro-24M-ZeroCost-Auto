@@ -25,9 +25,17 @@ test_chrome/
 execution.log
 temp/
 artifacts/
-*.png
-*.jpg
+/*.png
+/*.jpg
+screenshots/*.png
+screenshots/*.jpg
 *.tmp
+!extensions/**/*.png
+!extensions/**/*.jpg
+!extensions/**/*.svg
+!extensions/**/*.webp
+!assets/**/*.png
+!assets/**/*.ico
 
 # System
 .DS_Store

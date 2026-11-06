@@ -202,9 +202,17 @@ class StackingEngine:
 
     def _resolve_ext_dir(self, folder_name: str) -> str:
         p1 = os.path.join(BASE_DIR, "extensions", folder_name)
-        if os.path.exists(p1):
+        p2 = os.path.join(RESOURCE_DIR, "extensions", folder_name)
+        # If running from a bundled app (RESOURCE_DIR != BASE_DIR), always sync missing files from RESOURCE_DIR -> BASE_DIR
+        if RESOURCE_DIR != BASE_DIR and os.path.exists(p2):
+            try:
+                os.makedirs(os.path.dirname(p1), exist_ok=True)
+                shutil.copytree(p2, p1, dirs_exist_ok=True)
+            except Exception:
+                pass
+        if os.path.exists(p1) and os.path.isfile(os.path.join(p1, "manifest.json")):
             return p1
-        return os.path.join(RESOURCE_DIR, "extensions", folder_name)
+        return p2
 
     def _get_play_guard_js(self) -> str:
         for base in (BASE_DIR, RESOURCE_DIR):
