@@ -1,7 +1,10 @@
 @echo off
 chcp 65001 >nul
-title Google AI Pro - Chay Nang Cap 24 Thang (Stacking Flow)
+title "Google AI Pro - Chay Nang Cap 24 Thang (Stacking Flow)"
 cd /d "%~dp0"
+
+call "%~dp0tools\bootstrap_env.bat"
+if %errorlevel% neq 0 exit /b %errorlevel%
 
 echo ======================================================================
 echo   GOOGLE AI PRO 24-MONTH: CHAY TU DONG CHONG GOI 24 THANG ($0.00)
@@ -18,7 +21,7 @@ echo.
 echo ======================================================================
 echo.
 
-python launch_interactive_instance.py exec %1
+"%PY_CMD%" launch_interactive_instance.py exec %1
 
 echo.
 pause

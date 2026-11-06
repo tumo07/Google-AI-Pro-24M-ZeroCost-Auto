@@ -20,4 +20,5 @@ if [ ! -d ".venv" ]; then
 fi
 
 source .venv/bin/activate
+python3 tools/check_dependencies.py
 exec python3 gui_app.py

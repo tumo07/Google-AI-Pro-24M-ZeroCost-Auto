@@ -1,6 +1,9 @@
 @echo off
-title Google AI Pro - Custom 24M Flow Console
+title "Google AI Pro - Custom 24M Flow Console"
 cd /d "%~dp0"
+
+call "%~dp0tools\bootstrap_env.bat"
+if %errorlevel% neq 0 exit /b %errorlevel%
 
 :menu
 cls
@@ -21,44 +24,49 @@ set /p opt="Nhap lua chon cua ban [0-6]: "
 if "%opt%"=="0" (
     echo.
     echo Dang mo payments.google.com...
-    python custom_stacking_flow.py profile ny
+    "%PY_CMD%" custom_stacking_flow.py profile ny
     pause
     goto menu
 )
 if "%opt%"=="1" (
     echo.
     echo Dang chay Layer 1...
-    python custom_stacking_flow.py layer1
+    "%PY_CMD%" custom_stacking_flow.py layer1
     pause
     goto menu
 )
 if "%opt%"=="2" (
     echo.
     echo Dang chay Layer 2...
-    python custom_stacking_flow.py layer2
+    "%PY_CMD%" custom_stacking_flow.py layer2
     pause
     goto menu
 )
 if "%opt%"=="3" (
     echo.
     echo Dang chay Layer 3...
-    python custom_stacking_flow.py layer3
+    "%PY_CMD%" custom_stacking_flow.py layer3
     pause
     goto menu
 )
 if "%opt%"=="4" (
     echo.
     echo Dang huy gia han tu dong...
-    python custom_stacking_flow.py cancel
+    "%PY_CMD%" custom_stacking_flow.py cancel
     pause
     goto menu
 )
 if "%opt%"=="5" (
     echo.
-    echo Dang chay tu dong toan bo chu trinh...
-    python custom_stacking_flow.py auto
+    echo Dang chay toan bo quy trinh cong don 24 thang...
+    "%PY_CMD%" custom_stacking_flow.py full
     pause
     goto menu
 )
-if "%opt%"=="6" exit
+if "%opt%"=="6" (
+    exit /b 0
+)
+
+echo Lua chon khong hop le!
+pause
 goto menu

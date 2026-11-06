@@ -1,7 +1,10 @@
 @echo off
 chcp 65001 >nul
-title Google AI Pro - Dang Nhap Account Moi (Interactive Session)
+title "Google AI Pro - Dang Nhap Account Moi (Interactive Session)"
 cd /d "%~dp0"
+
+call "%~dp0tools\bootstrap_env.bat"
+if %errorlevel% neq 0 exit /b %errorlevel%
 
 echo ======================================================================
 echo   GOOGLE AI PRO 24-MONTH: KHOI DONG CUA SO DANG NHAP INSTANCE MOI
@@ -19,7 +22,7 @@ echo He thong se tu dong nhan dien khi ban dang nhap thanh cong!
 echo ======================================================================
 echo.
 
-python launch_interactive_instance.py launch %1
+"%PY_CMD%" launch_interactive_instance.py launch %1
 
 echo.
 echo Dang nhap da san sang! Ban co the chay tiep file:
