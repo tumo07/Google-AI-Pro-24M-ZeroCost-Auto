@@ -267,12 +267,13 @@ class UniversalStackerApp(ctk.CTk):
         )
         self.guard_badge.pack(side="right", padx=6, pady=16)
 
-        # 2. Stepper Roadmap Bar (Visual 4-Stage Progress)
+        # 2. Stepper Roadmap Bar (Visual 5-Stage Progress including Step 0 Staging)
         self.stepper_frame = ctk.CTkFrame(self, fg_color="#18181b", corner_radius=10, height=44)
         self.stepper_frame.pack(fill="x", padx=16, pady=(0, 8))
 
         self.step_labels = []
         steps_data = [
+            ("0", "Cài Đặt & Tiện Ích", "#06b6d4"),
             ("1", "Đăng Nhập Google", "#38bdf8"),
             ("2", "Nâng Cấp 24 Tháng", "#a855f7"),
             ("3", "Hủy Gia Hạn & Gỡ Thẻ", "#f59e0b"),
@@ -349,6 +350,44 @@ class UniversalStackerApp(ctk.CTk):
         # Scrollable container for wizard steps
         scroll = ctk.CTkScrollableFrame(self.tab_wizard, fg_color="transparent")
         scroll.pack(fill="both", expand=True, padx=2, pady=2)
+
+        # 🛠️ Card Step 0: Environment, macOS Permissions & Extension Staging
+        card0 = ctk.CTkFrame(scroll, fg_color="#172554", corner_radius=10, border_width=1, border_color="#0284c7")
+        card0.pack(fill="x", pady=(2, 8))
+
+        c0_header = ctk.CTkFrame(card0, fg_color="transparent")
+        c0_header.pack(fill="x", padx=12, pady=(8, 2))
+        ctk.CTkLabel(
+            c0_header, text="🛠️ BƯỚC 0: CÀI ĐẶT MÔI TRƯỜNG, QUYỀN MACOS & TIỆN ÍCH (STAGING)",
+            font=ctk.CTkFont(family=FONT_HEADING, size=11, weight="bold"),
+            text_color="#38bdf8"
+        ).pack(side="left")
+
+        ctk.CTkLabel(
+            card0,
+            text="Bấm 1 lần trước khi sử dụng: Tự động cấp quyền macOS Sonoma/Sequoia, giải nén Browsec VPN + Offer Injector, và cài đặt trình duyệt tương thích (Workaround vượt chặn --load-extension của Chrome 137+).",
+            font=ctk.CTkFont(family=FONT_BODY, size=11),
+            text_color="#bae6fd", wraplength=410, justify="left"
+        ).pack(anchor="w", padx=12, pady=(0, 4))
+
+        staged_ok = bool(self.cfg.get("staged_ready"))
+        staged_br = self.cfg.get("staged_browser", "Tự động")
+        self.lbl_staging_status = ctk.CTkLabel(
+            card0,
+            text=f"🟢 Đã sẵn sàng (Trình duyệt: {staged_br} + Dual-Mode CDP)" if staged_ok else "🟡 Trạng thái: Chưa khởi tạo Staging (Hãy bấm nút bên dưới)",
+            font=ctk.CTkFont(family=FONT_BODY, size=11, weight="bold"),
+            text_color="#4ade80" if staged_ok else "#fbbf24"
+        )
+        self.lbl_staging_status.pack(anchor="w", padx=12, pady=(0, 6))
+
+        self.btn_staging = ctk.CTkButton(
+            card0,
+            text="⚙️ 0. Cài Đặt Môi Trường, Cấp Quyền & Nạp Tiện Ích (Staging)",
+            font=ctk.CTkFont(family=FONT_BODY, size=12, weight="bold"),
+            fg_color="#0284c7", hover_color="#0369a1", height=36,
+            command=self._cmd_run_staging
+        )
+        self.btn_staging.pack(fill="x", padx=12, pady=(2, 10))
 
         # 🌟 Highlighted 1-Click All-in-One Banner
         all_in_one_card = ctk.CTkFrame(scroll, fg_color="#064e3b", corner_radius=10, border_width=1, border_color="#059669")
@@ -893,14 +932,25 @@ class UniversalStackerApp(ctk.CTk):
     def _on_engine_event(self, event_type: str, message: str):
         self.after(0, self.append_log, event_type, message)
 
-        if event_type == "HALT_LOGIN":
+        if event_type == "STAGING_DONE":
+            self.cfg = self.load_config()
+            br_name = self.cfg.get("staged_browser", "Chromium / Edge")
+            if hasattr(self, "lbl_staging_status"):
+                self.after(0, lambda: self.lbl_staging_status.configure(
+                    text=f"🟢 Đã sẵn sàng (Trình duyệt: {br_name} + Dual-Mode CDP)",
+                    text_color="#4ade80"
+                ))
+            self.after(0, self.set_checkpoint_status, "success", "🟢 Hoàn Tất Cài Đặt Môi Trường (Staging)", message)
+            self.after(0, self.set_progress, 1.0)
+            self.after(0, self._highlight_step, 1)
+        elif event_type == "HALT_LOGIN":
             self.after(0, self.set_checkpoint_status, "halt_login", "🟡 Đang chờ đăng nhập & 2FA", message)
             self.after(0, self.set_progress, 0.15)
-            self.after(0, self._highlight_step, 0)
+            self.after(0, self._highlight_step, 1)
         elif event_type == "RESUME_LOGIN":
             self.after(0, self.set_checkpoint_status, "running", "🟢 Đã đăng nhập thành công", "Tự động tiếp tục chuyển sang bước nâng cấp...")
             self.after(0, self.set_progress, 0.3)
-            self.after(0, self._highlight_step, 1)
+            self.after(0, self._highlight_step, 2)
             self.after(0, self._refresh_accounts)
         elif event_type == "HALT_CAPTCHA":
             self.after(0, self.set_checkpoint_status, "halt_captcha", "🟠 Tạm dừng: Giải Captcha", message)
@@ -912,26 +962,54 @@ class UniversalStackerApp(ctk.CTk):
             self.after(0, self.set_checkpoint_status, "running", "🟢 Đã nhận diện thẻ thanh toán", "Tự động tiếp tục...")
         elif event_type == "STAGE":
             self.after(0, self.set_checkpoint_status, "running", "🔵 Đang xử lý tự động", message)
-            if "Layer 1" in message:
+            if "STAGING" in message:
+                self.after(0, self.set_progress, 0.25)
+                self.after(0, self._highlight_step, 0)
+            elif "Layer 1" in message:
                 self.after(0, self.set_progress, 0.45)
-                self.after(0, self._highlight_step, 1)
+                self.after(0, self._highlight_step, 2)
             elif "Layer 2" in message:
                 self.after(0, self.set_progress, 0.65)
-                self.after(0, self._highlight_step, 1)
+                self.after(0, self._highlight_step, 2)
             elif "Layer 3" in message:
                 self.after(0, self.set_progress, 0.8)
-                self.after(0, self._highlight_step, 1)
+                self.after(0, self._highlight_step, 2)
             elif "Canceling" in message or "Google Play" in message:
                 self.after(0, self.set_progress, 0.9)
-                self.after(0, self._highlight_step, 2)
+                self.after(0, self._highlight_step, 3)
             elif "Việt Nam" in message:
                 self.after(0, self.set_progress, 0.95)
-                self.after(0, self._highlight_step, 3)
+                self.after(0, self._highlight_step, 4)
         elif event_type in ["COMPLETED", "SUCCESS"]:
             self.after(0, self.set_checkpoint_status, "success", "🎉 Hoàn Tất 24 Tháng Google AI Pro 5 TB!", "Đã hoàn tất cộng dồn đủ 24 tháng, hủy phí gia hạn định kỳ và gỡ thẻ thành công.")
             self.after(0, self.set_progress, 1.0)
-            self.after(0, self._highlight_step, 3)
+            self.after(0, self._highlight_step, 4)
             self.after(0, self._refresh_accounts)
+
+    def _cmd_run_staging(self):
+        if self.is_running:
+            self.append_log("WARN", "Một tiến trình đang chạy, vui lòng đợi hoàn tất...")
+            return
+        self.is_running = True
+        self.btn_staging.configure(state="disabled", text="⏳ Đang cài đặt môi trường & tiện ích...")
+        self._highlight_step(0)
+        self.set_progress(0.15)
+        self.set_checkpoint_status("running", "🛠️ Đang chuẩn bị môi trường (Staging)", "Đang kiểm tra quyền hệ thống, giải nén tiện ích và cài đặt trình duyệt hỗ trợ Extension...")
+
+        def _worker():
+            try:
+                eng = engine_stacker.StackingEngine(self.active_account_id, on_event=self._on_engine_event)
+                eng.run_staging_environment()
+            except Exception as e:
+                self._on_engine_event("ERROR", f"Lỗi Staging: {e}")
+            finally:
+                self.is_running = False
+                self.after(0, lambda: self.btn_staging.configure(
+                    state="normal",
+                    text="✅ 0. Kiểm Tra / Chạy Lại Cài Đặt Môi Trường & Tiện Ích"
+                ))
+
+        threading.Thread(target=_worker, daemon=True).start()
 
     def _cmd_launch_signin(self):
         self.append_log("STAGE", f"Đang khởi tạo trình duyệt hiển thị trên màn hình cho [{self.active_account_id}]...")

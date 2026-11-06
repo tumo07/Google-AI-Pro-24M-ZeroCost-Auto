@@ -27,18 +27,62 @@ from typing import Callable, Dict, Any, Optional
 import ensure_env
 from playwright.async_api import async_playwright
 
+def _find_playwright_chromium_binary() -> Optional[str]:
+    """
+    Scans standard Playwright browser cache directories for 'Google Chrome for Testing' / 'Chromium',
+    which natively supports --load-extension on macOS Sonoma/Sequoia and Windows even though branded
+    Google Chrome 137+ disabled --load-extension.
+    """
+    import glob
+    search_roots = []
+    if sys.platform == "darwin":
+        search_roots = [
+            os.path.expanduser("~/Library/Caches/ms-playwright"),
+            os.path.expanduser("~/Library/Application Support/GoogleAIProAutomator/ms-playwright"),
+        ]
+        patterns = [
+            "chromium-*/chrome-mac*/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing",
+            "chromium-*/chrome-mac*/Chromium.app/Contents/MacOS/Chromium",
+        ]
+    elif sys.platform == "win32":
+        search_roots = [
+            os.path.expandvars(r"%LOCALAPPDATA%\ms-playwright"),
+        ]
+        patterns = [
+            r"chromium-*\chrome-win*\chrome.exe",
+        ]
+    else:
+        search_roots = [
+            os.path.expanduser("~/.cache/ms-playwright"),
+        ]
+        patterns = [
+            "chromium-*/chrome-linux/chrome",
+        ]
+
+    for root in search_roots:
+        if not os.path.exists(root):
+            continue
+        for pat in patterns:
+            matches = sorted(glob.glob(os.path.join(root, pat)), reverse=True)
+            for m in matches:
+                if os.path.isfile(m):
+                    return m
+    return None
+
+
 def _find_browser_binary(prefer_edge: bool = True):
     """
-    Finds the best available browser executable across Edge, Chrome, Brave, and Chromium.
-    Supports Windows, macOS (Apple Silicon arm64 & Intel x86_64), and Linux.
+    Finds the best available browser executable that supports unpacked extensions (--load-extension):
+    - On macOS: Prioritizes Staged Chromium (Chrome for Testing), Microsoft Edge, Brave, and Chromium
+      before branded Google Chrome (since branded Chrome 137+ restricts --load-extension).
+    - On Windows: Prioritizes Microsoft Edge, Staged Chromium, Brave, then Chrome.
     Returns (browser_name, browser_path).
     """
+    pw_chromium = _find_playwright_chromium_binary()
+
     if sys.platform == "darwin":
-        # macOS paths (Universal Fat Binary: arm64 Apple Silicon & x86_64 Intel)
-        chrome_paths = [
-            "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
-            os.path.expanduser("~/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"),
-        ]
+        # macOS paths: prioritize extension-compatible browsers first!
+        pw_candidates = [("Chromium (Staged Extension Engine)", pw_chromium)] if pw_chromium else []
         edge_paths = [
             "/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge",
             os.path.expanduser("~/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge"),
@@ -48,23 +92,33 @@ def _find_browser_binary(prefer_edge: bool = True):
             os.path.expanduser("~/Applications/Brave Browser.app/Contents/MacOS/Brave Browser"),
         ]
         chromium_paths = [
+            "/Applications/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing",
+            os.path.expanduser("~/Applications/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing"),
             "/Applications/Chromium.app/Contents/MacOS/Chromium",
             os.path.expanduser("~/Applications/Chromium.app/Contents/MacOS/Chromium"),
+        ]
+        chrome_paths = [
+            "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+            os.path.expanduser("~/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"),
         ]
         arc_paths = [
             "/Applications/Arc.app/Contents/MacOS/Arc",
             os.path.expanduser("~/Applications/Arc.app/Contents/MacOS/Arc"),
         ]
-        if prefer_edge:
-            candidates = [("Edge", p) for p in edge_paths] + [("Chrome", p) for p in chrome_paths] + [("Brave", p) for p in brave_paths] + [("Chromium", p) for p in chromium_paths] + [("Arc", p) for p in arc_paths]
-        else:
-            candidates = [("Chrome", p) for p in chrome_paths] + [("Edge", p) for p in edge_paths] + [("Brave", p) for p in brave_paths] + [("Chromium", p) for p in chromium_paths] + [("Arc", p) for p in arc_paths]
+        candidates = (
+            pw_candidates
+            + [("Edge", p) for p in edge_paths]
+            + [("Brave", p) for p in brave_paths]
+            + [("Chromium", p) for p in chromium_paths]
+            + [("Chrome", p) for p in chrome_paths]
+            + [("Arc", p) for p in arc_paths]
+        )
 
         for name, p in candidates:
-            if os.path.exists(p):
+            if p and os.path.exists(p):
                 return name, p
 
-        for cmd_name, disp in [("google-chrome", "Chrome"), ("chrome", "Chrome"), ("microsoft-edge", "Edge"), ("brave", "Brave")]:
+        for cmd_name, disp in [("microsoft-edge", "Edge"), ("brave", "Brave"), ("chromium", "Chromium"), ("google-chrome", "Chrome"), ("chrome", "Chrome")]:
             w = shutil.which(cmd_name)
             if w:
                 return disp, w
@@ -76,6 +130,11 @@ def _find_browser_binary(prefer_edge: bool = True):
             r"C:\Program Files\Microsoft\Edge\Application\msedge.exe",
             os.path.expandvars(r"%LOCALAPPDATA%\Microsoft\Edge\Application\msedge.exe"),
         ]
+        pw_candidates = [("Chromium (Staged)", pw_chromium)] if pw_chromium else []
+        brave_paths = [
+            r"C:\Program Files\BraveSoftware\Brave-Browser\Application\brave.exe",
+            os.path.expandvars(r"%LOCALAPPDATA%\BraveSoftware\Brave-Browser\Application\brave.exe"),
+        ]
         chrome_paths = [
             r"C:\Program Files\Google\Chrome\Application\chrome.exe",
             r"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe",
@@ -83,34 +142,31 @@ def _find_browser_binary(prefer_edge: bool = True):
             os.path.expandvars(r"%PROGRAMFILES%\Google\Chrome\Application\chrome.exe"),
             os.path.expandvars(r"%PROGRAMFILES(X86)%\Google\Chrome\Application\chrome.exe"),
         ]
-        brave_paths = [
-            r"C:\Program Files\BraveSoftware\Brave-Browser\Application\brave.exe",
-            os.path.expandvars(r"%LOCALAPPDATA%\BraveSoftware\Brave-Browser\Application\brave.exe"),
-        ]
-        candidates = [("Edge", p) for p in edge_paths] + [("Chrome", p) for p in chrome_paths] + [("Brave", p) for p in brave_paths]
+        candidates = [("Edge", p) for p in edge_paths] + pw_candidates + [("Brave", p) for p in brave_paths] + [("Chrome", p) for p in chrome_paths]
         if not prefer_edge:
-            candidates = [("Chrome", p) for p in chrome_paths] + [("Edge", p) for p in edge_paths] + [("Brave", p) for p in brave_paths]
+            candidates = pw_candidates + [("Chrome", p) for p in chrome_paths] + [("Edge", p) for p in edge_paths] + [("Brave", p) for p in brave_paths]
 
         for name, p in candidates:
-            if os.path.exists(p):
+            if p and os.path.exists(p):
                 return name, p
         return "Edge", edge_paths[0]
 
     else:
         # Linux
-        linux_candidates = [
-            ("Chrome", "/usr/bin/google-chrome"),
-            ("Chrome", "/usr/bin/google-chrome-stable"),
+        pw_candidates = [("Chromium (Staged)", pw_chromium)] if pw_chromium else []
+        linux_candidates = pw_candidates + [
             ("Edge", "/usr/bin/microsoft-edge"),
             ("Edge", "/usr/bin/microsoft-edge-stable"),
             ("Brave", "/usr/bin/brave-browser"),
             ("Chromium", "/usr/bin/chromium-browser"),
             ("Chromium", "/usr/bin/chromium"),
+            ("Chrome", "/usr/bin/google-chrome"),
+            ("Chrome", "/usr/bin/google-chrome-stable"),
         ]
         for name, p in linux_candidates:
-            if os.path.exists(p):
+            if p and os.path.exists(p):
                 return name, p
-        for cmd_name, disp in [("google-chrome", "Chrome"), ("microsoft-edge", "Edge"), ("brave-browser", "Brave"), ("chromium", "Chromium")]:
+        for cmd_name, disp in [("microsoft-edge", "Edge"), ("brave-browser", "Brave"), ("chromium", "Chromium"), ("google-chrome", "Chrome")]:
             w = shutil.which(cmd_name)
             if w:
                 return disp, w
