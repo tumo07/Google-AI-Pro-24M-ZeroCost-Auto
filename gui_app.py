@@ -61,16 +61,36 @@ else:
 ctk.set_appearance_mode("dark")
 ctk.set_default_color_theme("blue")
 
+def _apply_fluent_theme(window):
+    """Applies authentic Windows 11 DWM dark titlebar and rounded corners."""
+    if sys.platform != "win32":
+        return
+    try:
+        import ctypes
+        from ctypes import c_int, byref, sizeof
+        window.update_idletasks()
+        hwnd = ctypes.windll.user32.GetParent(window.winfo_id())
+        if not hwnd:
+            hwnd = window.winfo_id()
+        # DWMWA_USE_IMMERSIVE_DARK_MODE = 20
+        dark_val = c_int(1)
+        ctypes.windll.dwmapi.DwmSetWindowAttribute(hwnd, 20, byref(dark_val), sizeof(dark_val))
+        # DWMWA_WINDOW_CORNER_PREFERENCE = 33 (2 = DWMWCP_ROUND)
+        corner_val = c_int(2)
+        ctypes.windll.dwmapi.DwmSetWindowAttribute(hwnd, 33, byref(corner_val), sizeof(corner_val))
+    except Exception:
+        pass
+
 class UniversalStackerApp(ctk.CTk):
     def __init__(self):
         if not _verify_author_seal():
             import sys; sys.exit(1)
         super().__init__()
 
-        self.title(f"Google AI Pro 24-Month Automator v1.3.0 · Universal Edition ({OS_DESC})")
+        self.title(f"Google AI Pro 24-Month Automator v1.3.1 · Universal Edition ({OS_DESC})")
         self.geometry("1100x820")
         self.minsize(960, 700)
-        self.configure(fg_color="#121214")
+        self.configure(fg_color="#18181b")
 
         self.cfg = self.load_config()
         self.active_account_id = "Account_1"
@@ -80,6 +100,7 @@ class UniversalStackerApp(ctk.CTk):
 
         self._build_ui()
         self._refresh_accounts()
+        _apply_fluent_theme(self)
 
     def load_config(self) -> Dict[str, Any]:
         if os.path.exists(CONFIG_PATH):
@@ -155,7 +176,7 @@ class UniversalStackerApp(ctk.CTk):
         steps_data = [
             ("1", "Đăng Nhập Google", "#38bdf8"),
             ("2", "Nâng Cấp 24 Tháng", "#a855f7"),
-            ("3", "Khóa 2028 & Gỡ Thẻ", "#f59e0b"),
+            ("3", "Hủy Gia Hạn & Gỡ Thẻ", "#f59e0b"),
             ("4", "Chia Sẻ Gia Đình", "#10b981")
         ]
         
@@ -244,7 +265,7 @@ class UniversalStackerApp(ctk.CTk):
 
         lbl_aio_desc = ctk.CTkLabel(
             all_in_one_card,
-            text="Tự động hóa trọn gói: Mở trình duyệt ➔ Đăng nhập ➔ Nâng cấp 3 tầng 24 tháng ➔ Hủy gia hạn khóa hạn 2028 ➔ Tự động gỡ thẻ bảo vệ an toàn 0đ.",
+            text="Tự động hóa trọn gói: Mở trình duyệt ➔ Đăng nhập ➔ Nâng cấp 3 tầng 24 tháng ➔ Hủy gia hạn tự động tránh phát sinh phí ➔ Tự động gỡ thẻ bảo vệ an toàn 0đ.",
             font=ctk.CTkFont(family=FONT_BODY, size=11),
             text_color="#d1fae5",
             wraplength=410,
@@ -359,14 +380,14 @@ class UniversalStackerApp(ctk.CTk):
         c3_header = ctk.CTkFrame(card3, fg_color="transparent")
         c3_header.pack(fill="x", padx=12, pady=(8, 2))
         ctk.CTkLabel(
-            c3_header, text="BƯỚC 3: KHÓA HẠN 2028 & GỠ THẺ BẢO VỆ 0Đ",
+            c3_header, text="BƯỚC 3: HỦY GIA HẠN TỰ ĐỘNG & GỠ THẺ BẢO VỆ 0Đ",
             font=ctk.CTkFont(family=FONT_HEADING, size=12, weight="bold"),
             text_color="#fbbf24"
         ).pack(side="left")
 
         ctk.CTkLabel(
             card3,
-            text="Hủy tự động gia hạn định kỳ trên Google Play để khóa cứng mốc 24 tháng đến năm 2028, triệt tiêu phí YouTube $11.99 và gỡ toàn bộ thẻ thanh toán.",
+            text="Hủy tự động gia hạn định kỳ trên Google Play để bảo lưu trọn vẹn thời hạn 24 tháng, triệt tiêu hoàn toàn nguy cơ phát sinh phí và gỡ toàn bộ thẻ thanh toán.",
             font=ctk.CTkFont(family=FONT_BODY, size=11),
             text_color="#a1a1aa", wraplength=410, justify="left"
         ).pack(anchor="w", padx=12, pady=(0, 6))
@@ -376,7 +397,7 @@ class UniversalStackerApp(ctk.CTk):
 
         self.btn_cancel_renew = ctk.CTkButton(
             row_c3,
-            text="🛡️ 3. Hủy Gia Hạn (Khóa 2028)",
+            text="🛡️ 3. Hủy Gia Hạn & Gỡ Thẻ",
             font=ctk.CTkFont(family=FONT_BODY, size=11, weight="bold"),
             fg_color="#d97706", hover_color="#b45309", height=34,
             command=self._cmd_cancel_renewal
@@ -424,29 +445,78 @@ class UniversalStackerApp(ctk.CTk):
         scroll = ctk.CTkScrollableFrame(self.tab_advanced, fg_color="transparent")
         scroll.pack(fill="both", expand=True, padx=2, pady=2)
 
-        # Account Selector
+        # 1. Robust Multi-Account Management Card (Win11 Fluent Card)
+        card_acc = ctk.CTkFrame(scroll, fg_color="#202023", corner_radius=10, border_width=1, border_color="#2d2d30")
+        card_acc.pack(fill="x", padx=4, pady=(4, 12))
+
         ctk.CTkLabel(
-            scroll, text="QUẢN LÝ PHIÊN TÀI KHOẢN (MULTI-ACCOUNT)",
-            font=ctk.CTkFont(family=FONT_HEADING, size=11, weight="bold"),
+            card_acc, text="👥 QUẢN LÝ TÀI KHOẢN (MULTI-ACCOUNT MANAGER)",
+            font=ctk.CTkFont(family=FONT_HEADING, size=12, weight="bold"),
+            text_color="#38bdf8"
+        ).pack(anchor="w", padx=12, pady=(10, 4))
+
+        ctk.CTkLabel(
+            card_acc, text="Chọn tài khoản đang làm việc hoặc thêm mới, xóa tài khoản, dọn dẹp cache phiên:",
+            font=ctk.CTkFont(family=FONT_BODY, size=11),
             text_color="#a1a1aa"
-        ).pack(anchor="w", padx=10, pady=(6, 4))
+        ).pack(anchor="w", padx=12, pady=(0, 6))
 
         self.account_menu = ctk.CTkOptionMenu(
-            scroll,
+            card_acc,
             values=["Account_1 (Chưa đăng nhập)"],
             command=self._on_account_selected,
             font=ctk.CTkFont(family=FONT_BODY, size=12),
             fg_color="#27272a", button_color="#3f3f46", height=34
         )
-        self.account_menu.pack(fill="x", padx=10, pady=(0, 8))
+        self.account_menu.pack(fill="x", padx=12, pady=(0, 8))
+
+        # Status & details badge row
+        self.lbl_acc_info = ctk.CTkLabel(
+            card_acc, text="📍 Đang chọn: Account_1 | Thư mục: profiles/Account_1",
+            font=ctk.CTkFont(family=FONT_BODY, size=11),
+            text_color="#94a3b8"
+        )
+        self.lbl_acc_info.pack(anchor="w", padx=12, pady=(0, 8))
+
+        # Row 1: Add new & Delete active
+        row_acc_act = ctk.CTkFrame(card_acc, fg_color="transparent")
+        row_acc_act.pack(fill="x", padx=12, pady=(0, 6))
 
         btn_new_acc = ctk.CTkButton(
-            scroll, text="➕ Thêm Phiên Tài Khoản Mới (Account_2, ...)",
-            font=ctk.CTkFont(family=FONT_BODY, size=12),
-            fg_color="#3f3f46", hover_color="#52525b", height=32,
+            row_acc_act, text="➕ Thêm Tài Khoản Mới",
+            font=ctk.CTkFont(family=FONT_BODY, size=11, weight="bold"),
+            fg_color="#0284c7", hover_color="#0369a1", height=32,
             command=self._cmd_create_new_instance
         )
-        btn_new_acc.pack(fill="x", padx=10, pady=(0, 14))
+        btn_new_acc.pack(side="left", fill="x", expand=True, padx=(0, 3))
+
+        btn_del_acc = ctk.CTkButton(
+            row_acc_act, text="🗑️ Xóa Tài Khoản Này",
+            font=ctk.CTkFont(family=FONT_BODY, size=11, weight="bold"),
+            fg_color="#b91c1c", hover_color="#991b1b", height=32,
+            command=self._cmd_delete_account
+        )
+        btn_del_acc.pack(side="right", fill="x", expand=True, padx=(3, 0))
+
+        # Row 2: Reset profile cache & Open folder
+        row_acc_util = ctk.CTkFrame(card_acc, fg_color="transparent")
+        row_acc_util.pack(fill="x", padx=12, pady=(0, 10))
+
+        btn_reset_acc = ctk.CTkButton(
+            row_acc_util, text="🧹 Reset Session / Dọn Cache",
+            font=ctk.CTkFont(family=FONT_BODY, size=11),
+            fg_color="#374151", hover_color="#4b5563", height=30,
+            command=self._cmd_reset_account_session
+        )
+        btn_reset_acc.pack(side="left", fill="x", expand=True, padx=(0, 3))
+
+        btn_open_folder = ctk.CTkButton(
+            row_acc_util, text="📂 Mở Thư Mục Profile",
+            font=ctk.CTkFont(family=FONT_BODY, size=11),
+            fg_color="#374151", hover_color="#4b5563", height=30,
+            command=self._cmd_open_profile_folder
+        )
+        btn_open_folder.pack(side="right", fill="x", expand=True, padx=(3, 0))
 
         # Individual Layer Run
         ctk.CTkLabel(
@@ -679,6 +749,8 @@ class UniversalStackerApp(ctk.CTk):
         accounts = self.cfg.get("accounts", [])
         if not accounts:
             self.account_menu.configure(values=["Account_1 (Chưa đăng nhập)"])
+            if hasattr(self, "lbl_acc_info"):
+                self.lbl_acc_info.configure(text="📍 Đang chọn: Account_1 | Thư mục: profiles/Account_1")
             return
             
         vals = []
@@ -688,12 +760,24 @@ class UniversalStackerApp(ctk.CTk):
             vals.append(f"{aid} ({em})")
             
         self.account_menu.configure(values=vals)
-        if vals:
+        cur_matched = [v for v in vals if v.startswith(self.active_account_id)]
+        if cur_matched:
+            self.account_menu.set(cur_matched[0])
+            self._update_acc_info_label(cur_matched[0])
+        elif vals:
             self.account_menu.set(vals[0])
+            self.active_account_id = vals[0].split()[0]
+            self._update_acc_info_label(vals[0])
+
+    def _update_acc_info_label(self, choice: str):
+        if hasattr(self, "lbl_acc_info"):
+            aid = choice.split()[0]
+            self.lbl_acc_info.configure(text=f"📍 Đang chọn: {aid} | Thư mục: profiles/{aid}")
 
     def _on_account_selected(self, choice: str):
         aid = choice.split()[0]
         self.active_account_id = aid
+        self._update_acc_info_label(choice)
         self.append_log("INFO", f"Đã chọn phiên làm việc: {choice}")
 
     def _on_engine_event(self, event_type: str, message: str):
@@ -734,7 +818,7 @@ class UniversalStackerApp(ctk.CTk):
                 self.after(0, self.set_progress, 0.95)
                 self.after(0, self._highlight_step, 3)
         elif event_type in ["COMPLETED", "SUCCESS"]:
-            self.after(0, self.set_checkpoint_status, "success", "🎉 Hoàn Tất 24 Tháng Google AI Pro 5 TB!", "Đã khóa cứng mốc tháng 11/2028, hủy phí định kỳ và gỡ thẻ thành công.")
+            self.after(0, self.set_checkpoint_status, "success", "🎉 Hoàn Tất 24 Tháng Google AI Pro 5 TB!", "Đã hoàn tất cộng dồn đủ 24 tháng, hủy phí gia hạn định kỳ và gỡ thẻ thành công.")
             self.after(0, self.set_progress, 1.0)
             self.after(0, self._highlight_step, 3)
             self.after(0, self._refresh_accounts)
@@ -785,7 +869,7 @@ class UniversalStackerApp(ctk.CTk):
         self.worker_thread.start()
 
     def _cmd_cancel_renewal(self):
-        self.append_log("STAGE", "Đang kết nối để hủy gia hạn bảo vệ tài khoản (Khóa 2028 & Triệt tiêu phí YouTube)...")
+        self.append_log("STAGE", "Đang kết nối để hủy gia hạn bảo vệ tài khoản (Hủy gia hạn định kỳ & Bảo lưu thời hạn)...")
 
         def _worker():
             try:
@@ -907,13 +991,64 @@ class UniversalStackerApp(ctk.CTk):
         }
         self.cfg.setdefault("accounts", []).append(new_acc)
         self.save_config()
-        self._refresh_accounts()
         self.active_account_id = new_id
-        for val in self.account_menu._values:
-            if val.startswith(new_id):
-                self.account_menu.set(val)
-                break
+        self._refresh_accounts()
         self.append_log("INFO", f"Đã tạo phiên mới: [{new_id}]. Bấm 'Mở Cửa Sổ Đăng Nhập' để nhập Gmail mới.")
+
+    def _cmd_delete_account(self):
+        accounts = self.cfg.get("accounts", [])
+        target_id = self.active_account_id
+        if len(accounts) <= 1:
+            if accounts:
+                accounts[0]["email"] = ""
+                accounts[0]["status"] = "pending_login"
+                accounts[0]["current_step"] = 0
+            profile_dir = os.path.join(BASE_DIR, "profiles", target_id)
+            if os.path.exists(profile_dir):
+                shutil.rmtree(profile_dir, ignore_errors=True)
+            self.save_config()
+            self._refresh_accounts()
+            self.append_log("INFO", f"Đã làm sạch dữ liệu và reset [{target_id}] về mặc định.")
+            return
+
+        self.cfg["accounts"] = [a for a in accounts if a.get("id") != target_id]
+        profile_dir = os.path.join(BASE_DIR, "profiles", target_id)
+        if os.path.exists(profile_dir):
+            shutil.rmtree(profile_dir, ignore_errors=True)
+        self.save_config()
+        remaining = self.cfg.get("accounts", [])
+        self.active_account_id = remaining[0]["id"] if remaining else "Account_1"
+        self._refresh_accounts()
+        self.append_log("OK", f"Đã xóa vĩnh viễn [{target_id}] và giải phóng thư mục lưu trữ.")
+
+    def _cmd_reset_account_session(self):
+        target_id = self.active_account_id
+        profile_dir = os.path.join(BASE_DIR, "profiles", target_id)
+        if os.path.exists(profile_dir):
+            try:
+                shutil.rmtree(profile_dir, ignore_errors=True)
+            except Exception as e:
+                self.append_log("WARN", f"Không thể xóa toàn bộ file cache: {e}")
+        for a in self.cfg.get("accounts", []):
+            if a.get("id") == target_id:
+                a["status"] = "pending_login"
+                a["email"] = ""
+                a["current_step"] = 0
+                break
+        self.save_config()
+        self._refresh_accounts()
+        self.append_log("OK", f"Đã dọn dẹp sạch cache và đặt lại trạng thái đăng nhập cho [{target_id}].")
+
+    def _cmd_open_profile_folder(self):
+        target_id = self.active_account_id
+        profile_dir = os.path.join(BASE_DIR, "profiles", target_id)
+        os.makedirs(profile_dir, exist_ok=True)
+        if IS_WIN:
+            os.startfile(profile_dir)
+        elif IS_MAC:
+            subprocess.Popen(["open", profile_dir])
+        else:
+            subprocess.Popen(["xdg-open", profile_dir])
 
 _instance_lock_handle = None
 

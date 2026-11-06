@@ -4,6 +4,27 @@ Toàn bộ các thay đổi, tính năng mới và cải tiến của dự án *
 
 ---
 
+## [v1.3.1] - 2026-11-06
+
+### 🎨 Tối Ưu Hóa Giao Diện Windows 11 Fluent & Quản Lý Đa Tài Khoản Chuyên Sâu
+- **🪟 Chuẩn Hóa Windows 11 Fluent Theme & DWM Titlebar:**
+  - Tích hợp hàm `_apply_fluent_theme` kích hoạt `DWMWA_USE_IMMERSIVE_DARK_MODE` và góc bo tròn `DWMWA_WINDOW_CORNER_PREFERENCE` trên Windows 11.
+  - Áp dụng bảng màu Fluent Dark hiện đại (`#18181b` / `#202023`) kèm viền thẻ tinh tế và phông chữ chuẩn bản địa `Segoe UI Variable`.
+- **👥 Nâng Cấp Quản Lý Đa Tài Khoản Mạnh Mẽ (Robust Multi-Account Manager):**
+  - Bổ sung tùy chọn **`🗑️ Xóa Tài Khoản Này`** (xóa tài khoản khỏi cấu hình và tự động dọn sạch thư mục profile dữ liệu).
+  - Bổ sung tùy chọn **`🧹 Reset Session / Dọn Cache`** (làm sạch cookie duyệt web của tài khoản được chọn để đăng nhập lại sạch sẽ).
+  - Bổ sung tùy chọn **`📂 Mở Thư Mục Profile`** (mở nhanh thư mục lưu trữ profile trong File Explorer).
+  - Hiển thị nhãn thông tin chi tiết: ID tài khoản đang chọn, đường dẫn lưu trữ và trạng thái phiên.
+- **✨ Chuẩn Hóa Lại Câu Chữ Bước 3 (Hủy Gia Hạn Tự Động & Gỡ Thẻ):**
+  - Loại bỏ hoàn toàn cụm từ gây hiểu nhầm "Khóa 2028".
+  - Chuyển thành tên chính xác và dễ hiểu: **`BƯỚC 3: HỦY GIA HẠN TỰ ĐỘNG & GỠ THẺ BẢO VỆ 0Đ`** (bảo lưu trọn vẹn thời hạn 24 tháng và triệt tiêu nguy cơ phát sinh phí).
+- **🎬 Cập Nhật Media & Clip Hướng Dẫn Chuẩn Xác:**
+  - Kết xuất lại toàn bộ 3 ảnh động hướng dẫn (`quick_start_flow.gif`, `step1_login_checkpoint.gif`, `step2_zero_dollar_guard.gif`) phản ánh 100% giao diện thực tế của ứng dụng Windows 11 (thanh tiêu đề Win11, Stepper Roadmap, Live Terminal và Thẻ hành động).
+- **🛡️ Khắc Phục Lỗi Cổng Socket Bằng Windows Kernel Named Mutex:**
+  - Thay thế socket TCP bằng `ctypes.windll.kernel32.CreateMutexW` (`Local\GoogleAIProAutomatorLock_tumo07`), miễn nhiễm triệt để với dải cổng loại trừ của Hyper-V / WinNAT (`WinError 10013`).
+
+---
+
 ## [v1.3.0] - 2026-11-06
 
 ### 🧭 Tái Cấu Trúc Toàn Diện Trải Nghiệm Người Dùng (Beginner-Friendly UX Overhaul)

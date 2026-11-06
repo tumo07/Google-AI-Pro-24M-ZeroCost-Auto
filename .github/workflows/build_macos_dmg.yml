@@ -57,7 +57,7 @@ jobs:
           cp -r "dist/Google AI Pro Automator.app" dist/dmg_root/
           
           # Create Apple Silicon DMG with hdiutil
-          hdiutil create -volname "Google AI Pro Automator" -srcfolder dist/dmg_root -ov -format UDZO "dist/GoogleAIProAutomator-v1.3.0-macOS-AppleSilicon.dmg"
+          hdiutil create -volname "Google AI Pro Automator" -srcfolder dist/dmg_root -ov -format UDZO "dist/GoogleAIProAutomator-v1.3.1-macOS-AppleSilicon.dmg"
 
       - name: Package Universal App DMG (Compatible with Apple Silicon & Intel)
         run: |
@@ -75,19 +75,19 @@ jobs:
           
           chmod +x dist/universal_dmg_root/*.command dist/universal_dmg_root/*.sh dist/universal_dmg_root/"Google AI Pro Automator.app"/Contents/MacOS/launcher
           
-          hdiutil create -volname "Google AI Pro Automator" -srcfolder dist/universal_dmg_root -ov -format UDZO "dist/GoogleAIProAutomator-v1.3.0-macOS-Universal.dmg"
+          hdiutil create -volname "Google AI Pro Automator" -srcfolder dist/universal_dmg_root -ov -format UDZO "dist/GoogleAIProAutomator-v1.3.1-macOS-Universal.dmg"
           
           # Also supply Intel-compatible DMG asset
-          cp "dist/GoogleAIProAutomator-v1.3.0-macOS-Universal.dmg" "dist/GoogleAIProAutomator-v1.3.0-macOS-Intel.dmg"
+          cp "dist/GoogleAIProAutomator-v1.3.1-macOS-Universal.dmg" "dist/GoogleAIProAutomator-v1.3.1-macOS-Intel.dmg"
           
           ls -lh dist/*.dmg
 
-      - name: Upload All DMG Packages to GitHub Release v1.3.0
+      - name: Upload All DMG Packages to GitHub Release v1.3.1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release upload v1.3.0 \
-            "dist/GoogleAIProAutomator-v1.3.0-macOS-AppleSilicon.dmg" \
-            "dist/GoogleAIProAutomator-v1.3.0-macOS-Universal.dmg" \
-            "dist/GoogleAIProAutomator-v1.3.0-macOS-Intel.dmg" \
+          gh release upload v1.3.1 \
+            "dist/GoogleAIProAutomator-v1.3.1-macOS-AppleSilicon.dmg" \
+            "dist/GoogleAIProAutomator-v1.3.1-macOS-Universal.dmg" \
+            "dist/GoogleAIProAutomator-v1.3.1-macOS-Intel.dmg" \
             --clobber
