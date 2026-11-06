@@ -1,6 +1,6 @@
 @echo off
 chcp 65001 >nul
-title "Google AI Pro - Dang Nhap & Tu Dong Nang Cap 24T Tron Goi"
+title Google AI Pro - Dang Nhap va Tu Dong Nang Cap 24T Tron Goi
 cd /d "%~dp0"
 
 call "%~dp0tools\bootstrap_env.bat"

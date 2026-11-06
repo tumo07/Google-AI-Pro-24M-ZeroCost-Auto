@@ -9,14 +9,10 @@ def _verify_author_seal() -> bool:
     return h == 0x2e1ff517
 
 """
-Google AI Pro 24-Month Automator — Windows 11 Fluent GUI
---------------------------------------------------------
-Crafted with CustomTkinter for native Windows 11 Fluent Design styling.
-Features:
-  - Halts at Login, Captcha, and Card details with Auto-Detection & Auto-Resume
-  - Step 5 YouTube Protection: Cancels auto-renewal to eliminate $11.99 charges
-  - Full 24-Month Zero-Cost Stacking to late 2028
-  - Real-time live log and checkpoint visualizer
+Google AI Pro 24-Month Automator — Friendly Wizard & Universal GUI
+------------------------------------------------------------------
+Redesigned with a Step-by-Step Guided Wizard for beginners, combined with
+a comprehensive real-time checkpoint monitor and zero-billing protection.
 """
 
 import os
@@ -39,14 +35,16 @@ from playwright.async_api import async_playwright
 # Setup base paths
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 CONFIG_PATH = os.path.join(BASE_DIR, "config.json")
-ARTIFACTS_DIR = r"C:\Users\khoa\.gemini\antigravity\brain\bdb8ac8f-261e-4351-8267-5fe6b7181fb3"
+SCREENSHOTS_DIR = os.path.join(BASE_DIR, "screenshots")
+os.makedirs(SCREENSHOTS_DIR, exist_ok=True)
 
 import engine_stacker
 
-# Detect Operating System and CPU Architecture (Apple Silicon arm64 / Intel x86_64 / Windows)
+# Detect Operating System and CPU Architecture
 IS_MAC = sys.platform == "darwin"
 IS_WIN = sys.platform == "win32"
 ARCH = platform.machine().lower()
+
 if IS_MAC:
     OS_DESC = f"🍎 macOS ({'Apple Silicon ' + ARCH if 'arm' in ARCH or 'aarch' in ARCH else 'Intel ' + ARCH})"
     FONT_HEADING = "SF Pro Display"
@@ -60,14 +58,8 @@ else:
     FONT_HEADING = "Ubuntu"
     FONT_BODY = "DejaVu Sans"
 
-# Set CustomTkinter theme
 ctk.set_appearance_mode("dark")
 ctk.set_default_color_theme("blue")
-
-class UniversalStackerApp(ctk.CTk):
-    pass
-UniversalStackerApp = UniversalStackerApp
-Windows11StackerApp = UniversalStackerApp
 
 class UniversalStackerApp(ctk.CTk):
     def __init__(self):
@@ -75,12 +67,10 @@ class UniversalStackerApp(ctk.CTk):
             import sys; sys.exit(1)
         super().__init__()
 
-        self.title(f"Google AI Pro 24-Month Automator · Universal v1.2.0 ({OS_DESC})")
-        self.geometry("1020x750")
-        self.minsize(880, 640)
-
-        # Apply dark background
-        self.configure(fg_color="#18181b")
+        self.title(f"Google AI Pro 24-Month Automator · Universal Edition ({OS_DESC})")
+        self.geometry("1100x820")
+        self.minsize(960, 700)
+        self.configure(fg_color="#121214")
 
         self.cfg = self.load_config()
         self.active_account_id = "Account_1"
@@ -93,260 +83,551 @@ class UniversalStackerApp(ctk.CTk):
 
     def load_config(self) -> Dict[str, Any]:
         if os.path.exists(CONFIG_PATH):
-            with open(CONFIG_PATH, "r", encoding="utf-8") as f:
-                return json.load(f)
+            try:
+                with open(CONFIG_PATH, "r", encoding="utf-8") as f:
+                    return json.load(f)
+            except Exception:
+                pass
         return {"accounts": [], "card": {}}
 
     def save_config(self):
-        with open(CONFIG_PATH, "w", encoding="utf-8") as f:
-            json.dump(self.cfg, f, indent=2, ensure_ascii=False)
+        try:
+            with open(CONFIG_PATH, "w", encoding="utf-8") as f:
+                json.dump(self.cfg, f, indent=2, ensure_ascii=False)
+        except Exception as e:
+            self.append_log("ERROR", f"Không thể lưu cấu hình: {e}")
 
     def _build_ui(self):
-        # 1. Top Header Bar (Windows 11 Fluent Header)
-        self.header_frame = ctk.CTkFrame(self, fg_color="#202023", corner_radius=12, height=64)
-        self.header_frame.pack(fill="x", padx=16, pady=(16, 10))
+        # 1. Header Bar
+        self.header_frame = ctk.CTkFrame(self, fg_color="#18181b", corner_radius=12, height=68)
+        self.header_frame.pack(fill="x", padx=16, pady=(14, 8))
 
-        # Title + Subtitle
+        # Title & Subtitle in header
+        title_box = ctk.CTkFrame(self.header_frame, fg_color="transparent")
+        title_box.pack(side="left", padx=16, pady=8)
+
         self.title_label = ctk.CTkLabel(
-            self.header_frame,
-            text="Google AI Pro (5 TB) 24-Month Automator v1.2.0",
+            title_box,
+            text="🚀 Google AI Pro 24-Month Zero-Cost Automator",
             font=ctk.CTkFont(family=FONT_HEADING, size=18, weight="bold"),
-            text_color="#ffffff"
+            text_color="#f4f4f5"
         )
-        self.title_label.pack(side="left", padx=18, pady=(10, 2))
+        self.title_label.pack(anchor="w")
 
-        # OS Architecture Pill
+        self.sub_label = ctk.CTkLabel(
+            title_box,
+            text="Tự động hóa cộng dồn 24 tháng 5 TB · Bảo vệ tuyệt đối US$0.00 · Tự động hủy gia hạn & gỡ thẻ",
+            font=ctk.CTkFont(family=FONT_BODY, size=12),
+            text_color="#a1a1aa"
+        )
+        self.sub_label.pack(anchor="w")
+
+        # Badges on right
         self.os_badge = ctk.CTkLabel(
             self.header_frame,
             text=OS_DESC,
-            font=ctk.CTkFont(family=FONT_BODY, size=12, weight="bold"),
+            font=ctk.CTkFont(family=FONT_BODY, size=11, weight="bold"),
             fg_color="#27272a",
-            text_color="#a1a1aa",
+            text_color="#d4d4d8",
             corner_radius=8,
             padx=10,
             pady=4
         )
-        self.os_badge.pack(side="right", padx=(4, 16), pady=12)
+        self.os_badge.pack(side="right", padx=(4, 16), pady=16)
 
-        # Status badge pill on right
-        self.vpn_badge = ctk.CTkLabel(
+        self.guard_badge = ctk.CTkLabel(
             self.header_frame,
-            text="🟢 US VPN: Browsec Ready",
-            font=ctk.CTkFont(family="Segoe UI Variable Text", size=12, weight="bold"),
-            fg_color="#1e3a2b",
-            text_color="#4ade80",
+            text="🛡️ $0.00 Price Guard: BẬT",
+            font=ctk.CTkFont(family=FONT_BODY, size=11, weight="bold"),
+            fg_color="#14532d",
+            text_color="#86efac",
             corner_radius=8,
-            padx=12,
+            padx=10,
             pady=4
         )
-        self.vpn_badge.pack(side="right", padx=16, pady=14)
+        self.guard_badge.pack(side="right", padx=6, pady=16)
 
-        # 2. Main Content Split (Left: Control Panel, Right: Logs & Monitor)
+        # 2. Stepper Roadmap Bar (Visual 4-Stage Progress)
+        self.stepper_frame = ctk.CTkFrame(self, fg_color="#18181b", corner_radius=10, height=44)
+        self.stepper_frame.pack(fill="x", padx=16, pady=(0, 8))
+
+        self.step_labels = []
+        steps_data = [
+            ("1", "Đăng Nhập Google", "#38bdf8"),
+            ("2", "Nâng Cấp 24 Tháng", "#a855f7"),
+            ("3", "Khóa 2028 & Gỡ Thẻ", "#f59e0b"),
+            ("4", "Chia Sẻ Gia Đình", "#10b981")
+        ]
+        
+        stepper_inner = ctk.CTkFrame(self.stepper_frame, fg_color="transparent")
+        stepper_inner.pack(expand=True, pady=6)
+
+        for i, (num, text, color) in enumerate(steps_data):
+            pill = ctk.CTkFrame(stepper_inner, fg_color="#27272a", corner_radius=6)
+            pill.pack(side="left", padx=6)
+            
+            lbl_num = ctk.CTkLabel(
+                pill, text=f" {num} ",
+                font=ctk.CTkFont(family=FONT_BODY, size=11, weight="bold"),
+                fg_color=color, text_color="#000000", corner_radius=4
+            )
+            lbl_num.pack(side="left", padx=(4, 6), pady=3)
+            
+            lbl_txt = ctk.CTkLabel(
+                pill, text=text,
+                font=ctk.CTkFont(family=FONT_BODY, size=11, weight="bold"),
+                text_color="#e4e4e7"
+            )
+            lbl_txt.pack(side="left", padx=(0, 8), pady=3)
+            
+            self.step_labels.append((pill, lbl_txt))
+            
+            if i < len(steps_data) - 1:
+                arrow = ctk.CTkLabel(
+                    stepper_inner, text="➔",
+                    font=ctk.CTkFont(family=FONT_BODY, size=12),
+                    text_color="#71717a"
+                )
+                arrow.pack(side="left", padx=2)
+
+        # 3. Main Workspace Split
         self.main_container = ctk.CTkFrame(self, fg_color="transparent")
-        self.main_container.pack(fill="both", expand=True, padx=16, pady=4)
+        self.main_container.pack(fill="both", expand=True, padx=16, pady=2)
 
-        # Left Column: Controls & Cards (width 380)
-        self.left_col = ctk.CTkFrame(self.main_container, fg_color="#202023", corner_radius=12, width=380)
-        self.left_col.pack(side="left", fill="both", padx=(0, 8), pady=4)
+        # Left Column: Tabs (Wizard / Advanced / FAQ) (Width: 460)
+        self.left_col = ctk.CTkFrame(self.main_container, fg_color="#18181b", corner_radius=12, width=470)
+        self.left_col.pack(side="left", fill="both", padx=(0, 8), pady=2)
         self.left_col.pack_propagate(False)
 
-        # Right Column: Checkpoints & Live Logs
-        self.right_col = ctk.CTkFrame(self.main_container, fg_color="#202023", corner_radius=12)
-        self.right_col.pack(side="right", fill="both", expand=True, padx=(8, 0), pady=4)
+        # Right Column: Monitoring & Live Logs
+        self.right_col = ctk.CTkFrame(self.main_container, fg_color="#18181b", corner_radius=12)
+        self.right_col.pack(side="right", fill="both", expand=True, padx=(8, 0), pady=2)
 
-        self._build_left_panel()
-        self._build_right_panel()
+        self._build_tabs()
+        self._build_monitor_panel()
 
-    def _build_left_panel(self):
-        pad_x = 16
-
-        # --- Section: Instance / Account Selector ---
-        lbl_acc = ctk.CTkLabel(
-            self.left_col, text="TÀI KHOẢN & INSTANCE",
-            font=ctk.CTkFont(family="Segoe UI Variable Text", size=11, weight="bold"),
-            text_color="#a1a1aa"
-        )
-        lbl_acc.pack(anchor="w", padx=pad_x, pady=(14, 4))
-
-        self.account_menu = ctk.CTkOptionMenu(
+    def _build_tabs(self):
+        self.tabs = ctk.CTkTabview(
             self.left_col,
-            values=["Account_1 (user@gmail.com)"],
-            command=self._on_account_selected,
-            font=ctk.CTkFont(family="Segoe UI Variable Text", size=13),
-            fg_color="#27272a",
-            button_color="#3f3f46",
-            button_hover_color="#52525b",
-            height=34
+            fg_color="transparent",
+            segmented_button_fg_color="#27272a",
+            segmented_button_selected_color="#0284c7",
+            segmented_button_selected_hover_color="#0369a1",
+            text_color="#f4f4f5"
         )
-        self.account_menu.pack(fill="x", padx=pad_x, pady=(0, 10))
+        self.tabs.pack(fill="both", expand=True, padx=12, pady=(4, 10))
 
-        # --- Section: Checkpoint Banner (Halt Indicator) ---
-        self.checkpoint_card = ctk.CTkFrame(self.left_col, fg_color="#27272a", corner_radius=10)
-        self.checkpoint_card.pack(fill="x", padx=pad_x, pady=6)
+        self.tab_wizard = self.tabs.add("🧭 Hướng Dẫn Từng Bước")
+        self.tab_advanced = self.tabs.add("⚙️ Nâng Cao")
+        self.tab_faq = self.tabs.add("💡 Hỏi Đáp & Trợ Giúp")
 
-        self.checkpoint_title = ctk.CTkLabel(
-            self.checkpoint_card,
-            text="🟢 Trạng thái: Sẵn sàng",
-            font=ctk.CTkFont(family="Segoe UI Variable Text", size=13, weight="bold"),
-            text_color="#4ade80"
+        self._build_wizard_tab()
+        self._build_advanced_tab()
+        self._build_faq_tab()
+
+    def _build_wizard_tab(self):
+        # Scrollable container for wizard steps
+        scroll = ctk.CTkScrollableFrame(self.tab_wizard, fg_color="transparent")
+        scroll.pack(fill="both", expand=True, padx=2, pady=2)
+
+        # 🌟 Highlighted 1-Click All-in-One Banner
+        all_in_one_card = ctk.CTkFrame(scroll, fg_color="#064e3b", corner_radius=10, border_width=1, border_color="#059669")
+        all_in_one_card.pack(fill="x", pady=(2, 10))
+
+        lbl_aio_title = ctk.CTkLabel(
+            all_in_one_card,
+            text="✨ KHUYÊN DÙNG CHO NGƯỜI MỚI (1-CLICK A ĐẾN Z)",
+            font=ctk.CTkFont(family=FONT_HEADING, size=12, weight="bold"),
+            text_color="#6ee7b7"
         )
-        self.checkpoint_title.pack(anchor="w", padx=12, pady=(10, 2))
+        lbl_aio_title.pack(anchor="w", padx=12, pady=(8, 2))
 
-        self.checkpoint_desc = ctk.CTkLabel(
-            self.checkpoint_card,
-            text="Hệ thống tự động dừng tại Login, Captcha, và Form thẻ, sau đó tự tiếp tục.",
-            font=ctk.CTkFont(family="Segoe UI Variable Text", size=11),
-            text_color="#94a3b8",
-            wraplength=330,
+        lbl_aio_desc = ctk.CTkLabel(
+            all_in_one_card,
+            text="Tự động hóa trọn gói: Mở trình duyệt ➔ Đăng nhập ➔ Nâng cấp 3 tầng 24 tháng ➔ Hủy gia hạn khóa hạn 2028 ➔ Tự động gỡ thẻ bảo vệ an toàn 0đ.",
+            font=ctk.CTkFont(family=FONT_BODY, size=11),
+            text_color="#d1fae5",
+            wraplength=410,
             justify="left"
         )
-        self.checkpoint_desc.pack(anchor="w", padx=12, pady=(0, 10))
+        lbl_aio_desc.pack(anchor="w", padx=12, pady=(0, 6))
 
-        # --- Section: Action Buttons ---
-        lbl_actions = ctk.CTkLabel(
-            self.left_col, text="THAO TÁC ĐIỀU KHIỂN",
-            font=ctk.CTkFont(family="Segoe UI Variable Text", size=11, weight="bold"),
-            text_color="#a1a1aa"
+        # Big All-in-One Button
+        self.btn_all_in_one = ctk.CTkButton(
+            all_in_one_card,
+            text="🚀 BẮT ĐẦU TỰ ĐỘNG TOÀN BỘ TỪ A ĐẾN Z",
+            font=ctk.CTkFont(family=FONT_BODY, size=13, weight="bold"),
+            fg_color="#059669",
+            hover_color="#047857",
+            height=40,
+            command=self._cmd_start_stacking
         )
-        lbl_actions.pack(anchor="w", padx=pad_x, pady=(12, 4))
+        self.btn_all_in_one.pack(fill="x", padx=12, pady=(2, 10))
 
-        # Button 1: Launch interactive sign-in
+        # Card Step 1: Login
+        card1 = ctk.CTkFrame(scroll, fg_color="#202023", corner_radius=10)
+        card1.pack(fill="x", pady=6)
+
+        c1_header = ctk.CTkFrame(card1, fg_color="transparent")
+        c1_header.pack(fill="x", padx=12, pady=(8, 2))
+        ctk.CTkLabel(
+            c1_header, text="BƯỚC 1: ĐĂNG NHẬP GOOGLE",
+            font=ctk.CTkFont(family=FONT_HEADING, size=12, weight="bold"),
+            text_color="#38bdf8"
+        ).pack(side="left")
+
+        ctk.CTkLabel(
+            card1,
+            text="Mở cửa sổ trình duyệt sạch (đã tích hợp VPN US và tiện ích kích hoạt gói). Bạn chỉ cần đăng nhập tài khoản Google và xác thực 2 bước (nếu có).",
+            font=ctk.CTkFont(family=FONT_BODY, size=11),
+            text_color="#a1a1aa", wraplength=410, justify="left"
+        ).pack(anchor="w", padx=12, pady=(0, 6))
+
         self.btn_signin = ctk.CTkButton(
-            self.left_col,
-            text="🚀 Bật cửa sổ đăng nhập (Màn hình chính)",
-            font=ctk.CTkFont(family="Segoe UI Variable Text", size=13, weight="bold"),
-            fg_color="#0284c7",
-            hover_color="#0369a1",
-            height=38,
+            card1,
+            text="🌐 1. Mở Cửa Sổ Đăng Nhập",
+            font=ctk.CTkFont(family=FONT_BODY, size=12, weight="bold"),
+            fg_color="#0284c7", hover_color="#0369a1", height=34,
             command=self._cmd_launch_signin
         )
-        self.btn_signin.pack(fill="x", padx=pad_x, pady=4)
+        self.btn_signin.pack(fill="x", padx=12, pady=(2, 10))
 
-        # Row: Start Stacking + Stop Button
-        row_action = ctk.CTkFrame(self.left_col, fg_color="transparent")
-        row_action.pack(fill="x", padx=pad_x, pady=4)
+        # Card Step 2: Auto-Stacking
+        card2 = ctk.CTkFrame(scroll, fg_color="#202023", corner_radius=10)
+        card2.pack(fill="x", pady=6)
+
+        c2_header = ctk.CTkFrame(card2, fg_color="transparent")
+        c2_header.pack(fill="x", padx=12, pady=(8, 2))
+        ctk.CTkLabel(
+            c2_header, text="BƯỚC 2: CỘNG DỒN 24 THÁNG ($0.00)",
+            font=ctk.CTkFont(family=FONT_HEADING, size=12, weight="bold"),
+            text_color="#c084fc"
+        ).pack(side="left")
+
+        ctk.CTkLabel(
+            card2,
+            text="Công cụ tự động cộng dồn: Tầng 1 (12M) ➔ Tầng 2 (+6M) ➔ Tầng 3 (+6M) đủ 24 tháng 5 TB. Bộ Play Guard đảm bảo giá luôn hiển thị $0.00 trước khi kích hoạt.",
+            font=ctk.CTkFont(family=FONT_BODY, size=11),
+            text_color="#a1a1aa", wraplength=410, justify="left"
+        ).pack(anchor="w", padx=12, pady=(0, 6))
+
+        # Checkboxes for protections
+        self.chk_auto_remove_cards = ctk.CTkCheckBox(
+            card2,
+            text="💳 Tự động gỡ sạch thẻ ngân hàng sau khi xong",
+            font=ctk.CTkFont(family=FONT_BODY, size=11),
+            text_color="#e4e4e7", fg_color="#0284c7"
+        )
+        self.chk_auto_remove_cards.select()
+        self.chk_auto_remove_cards.pack(anchor="w", padx=14, pady=(2, 4))
+
+        self.chk_auto_vn = ctk.CTkCheckBox(
+            card2,
+            text="🇻🇳 Tự động đổi vùng Việt Nam (Bật Family Sharing)",
+            font=ctk.CTkFont(family=FONT_BODY, size=11),
+            text_color="#e4e4e7", fg_color="#0284c7"
+        )
+        self.chk_auto_vn.select()
+        self.chk_auto_vn.pack(anchor="w", padx=14, pady=(0, 8))
+
+        row_c2 = ctk.CTkFrame(card2, fg_color="transparent")
+        row_c2.pack(fill="x", padx=12, pady=(0, 10))
 
         self.btn_stack = ctk.CTkButton(
-            row_action,
-            text="▶ Bắt đầu nâng cấp 24T ($0.00)",
-            font=ctk.CTkFont(family="Segoe UI Variable Text", size=13, weight="bold"),
-            fg_color="#16a34a",
-            hover_color="#15803d",
-            height=38,
+            row_c2,
+            text="▶️ 2. Bắt Đầu Nâng Cấp 24 Tháng",
+            font=ctk.CTkFont(family=FONT_BODY, size=12, weight="bold"),
+            fg_color="#7c3aed", hover_color="#6d28d9", height=36,
             command=self._cmd_start_stacking
         )
         self.btn_stack.pack(side="left", fill="x", expand=True, padx=(0, 4))
 
         self.btn_stop = ctk.CTkButton(
-            row_action,
-            text="⏹ Dừng (Stop)",
-            font=ctk.CTkFont(family="Segoe UI Variable Text", size=12, weight="bold"),
-            fg_color="#dc2626",
-            hover_color="#b91c1c",
-            height=38,
-            width=90,
+            row_c2,
+            text="⏹ Dừng",
+            font=ctk.CTkFont(family=FONT_BODY, size=12, weight="bold"),
+            fg_color="#dc2626", hover_color="#b91c1c", height=36, width=70,
             state="disabled",
             command=self._cmd_stop
         )
         self.btn_stop.pack(side="right")
 
-        # Checkbox: Auto-switch to Vietnam after stacking
-        self.chk_auto_vn = ctk.CTkCheckBox(
-            self.left_col,
-            text="🇻🇳 Tự động đổi vùng VN (Bật Family Sharing)",
-            font=ctk.CTkFont(family="Segoe UI Variable Text", size=11),
-            text_color="#e4e4e7",
-            fg_color="#0284c7",
-            hover_color="#0369a1"
-        )
-        self.chk_auto_vn.select()
-        self.chk_auto_vn.pack(anchor="w", padx=pad_x + 2, pady=(2, 6))
+        # Card Step 3: Protect & Cancel Renewal & Unlink Card
+        card3 = ctk.CTkFrame(scroll, fg_color="#202023", corner_radius=10)
+        card3.pack(fill="x", pady=6)
 
-        # Button 3: Cancel Auto-Renewal (Eliminate YouTube & Lock 2028)
+        c3_header = ctk.CTkFrame(card3, fg_color="transparent")
+        c3_header.pack(fill="x", padx=12, pady=(8, 2))
+        ctk.CTkLabel(
+            c3_header, text="BƯỚC 3: KHÓA HẠN 2028 & GỠ THẺ BẢO VỆ 0Đ",
+            font=ctk.CTkFont(family=FONT_HEADING, size=12, weight="bold"),
+            text_color="#fbbf24"
+        ).pack(side="left")
+
+        ctk.CTkLabel(
+            card3,
+            text="Hủy tự động gia hạn định kỳ trên Google Play để khóa cứng mốc 24 tháng đến năm 2028, triệt tiêu phí YouTube $11.99 và gỡ toàn bộ thẻ thanh toán.",
+            font=ctk.CTkFont(family=FONT_BODY, size=11),
+            text_color="#a1a1aa", wraplength=410, justify="left"
+        ).pack(anchor="w", padx=12, pady=(0, 6))
+
+        row_c3 = ctk.CTkFrame(card3, fg_color="transparent")
+        row_c3.pack(fill="x", padx=12, pady=(0, 10))
+
         self.btn_cancel_renew = ctk.CTkButton(
-            self.left_col,
-            text="🛡️ Hủy gia hạn ngay (Khóa 2028 & Hủy phí YT)",
-            font=ctk.CTkFont(family="Segoe UI Variable Text", size=12),
-            fg_color="#dc2626",
-            hover_color="#b91c1c",
-            height=34,
+            row_c3,
+            text="🛡️ 3. Hủy Gia Hạn (Khóa 2028)",
+            font=ctk.CTkFont(family=FONT_BODY, size=11, weight="bold"),
+            fg_color="#d97706", hover_color="#b45309", height=34,
             command=self._cmd_cancel_renewal
         )
-        self.btn_cancel_renew.pack(fill="x", padx=pad_x, pady=4)
+        self.btn_cancel_renew.pack(side="left", fill="x", expand=True, padx=(0, 4))
 
-        # Button 4: Switch Billing Region to Vietnam (Family Sharing)
+        self.btn_remove_cards = ctk.CTkButton(
+            row_c3,
+            text="💳 Gỡ Toàn Bộ Thẻ",
+            font=ctk.CTkFont(family=FONT_BODY, size=11, weight="bold"),
+            fg_color="#b91c1c", hover_color="#991b1b", height=34,
+            command=self._cmd_remove_cards_standalone
+        )
+        self.btn_remove_cards.pack(side="right", fill="x", expand=True, padx=(4, 0))
+
+        # Card Step 4: Family Sharing
+        card4 = ctk.CTkFrame(scroll, fg_color="#202023", corner_radius=10)
+        card4.pack(fill="x", pady=6)
+
+        c4_header = ctk.CTkFrame(card4, fg_color="transparent")
+        c4_header.pack(fill="x", padx=12, pady=(8, 2))
+        ctk.CTkLabel(
+            c4_header, text="BƯỚC 4: CHIA SẺ GIA ĐÌNH VIỆT NAM (TÙY CHỌN)",
+            font=ctk.CTkFont(family=FONT_HEADING, size=12, weight="bold"),
+            text_color="#34d399"
+        ).pack(side="left")
+
+        ctk.CTkLabel(
+            card4,
+            text="Chuyển vùng hồ sơ thanh toán về Việt Nam để bật chia sẻ nhóm gia đình Google One cho tối đa 5 người thân dùng chung dung lượng 5 TB.",
+            font=ctk.CTkFont(family=FONT_BODY, size=11),
+            text_color="#a1a1aa", wraplength=410, justify="left"
+        ).pack(anchor="w", padx=12, pady=(0, 6))
+
         self.btn_switch_vn = ctk.CTkButton(
-            self.left_col,
-            text="🇻🇳 Chuyển vùng về VN (Bật Family Sharing)",
-            font=ctk.CTkFont(family="Segoe UI Variable Text", size=12),
-            fg_color="#0d9488",
-            hover_color="#0f766e",
-            height=34,
+            card4,
+            text="🇻🇳 4. Chuyển Vùng Về Việt Nam (Family Sharing)",
+            font=ctk.CTkFont(family=FONT_BODY, size=11, weight="bold"),
+            fg_color="#059669", hover_color="#047857", height=34,
             command=self._cmd_switch_vn
         )
-        self.btn_switch_vn.pack(fill="x", padx=pad_x, pady=4)
+        self.btn_switch_vn.pack(fill="x", padx=12, pady=(2, 10))
 
-        # Button 5: Add New Account Instance
-        self.btn_new_instance = ctk.CTkButton(
-            self.left_col,
-            text="➕ Tạo phiên (Instance) tài khoản mới",
-            font=ctk.CTkFont(family="Segoe UI Variable Text", size=12),
-            fg_color="#3f3f46",
-            hover_color="#52525b",
-            height=32,
+    def _build_advanced_tab(self):
+        scroll = ctk.CTkScrollableFrame(self.tab_advanced, fg_color="transparent")
+        scroll.pack(fill="both", expand=True, padx=2, pady=2)
+
+        # Account Selector
+        ctk.CTkLabel(
+            scroll, text="QUẢN LÝ PHIÊN TÀI KHOẢN (MULTI-ACCOUNT)",
+            font=ctk.CTkFont(family=FONT_HEADING, size=11, weight="bold"),
+            text_color="#a1a1aa"
+        ).pack(anchor="w", padx=10, pady=(6, 4))
+
+        self.account_menu = ctk.CTkOptionMenu(
+            scroll,
+            values=["Account_1 (Chưa đăng nhập)"],
+            command=self._on_account_selected,
+            font=ctk.CTkFont(family=FONT_BODY, size=12),
+            fg_color="#27272a", button_color="#3f3f46", height=34
+        )
+        self.account_menu.pack(fill="x", padx=10, pady=(0, 8))
+
+        btn_new_acc = ctk.CTkButton(
+            scroll, text="➕ Thêm Phiên Tài Khoản Mới (Account_2, ...)",
+            font=ctk.CTkFont(family=FONT_BODY, size=12),
+            fg_color="#3f3f46", hover_color="#52525b", height=32,
             command=self._cmd_create_new_instance
         )
-        self.btn_new_instance.pack(fill="x", padx=pad_x, pady=4)
+        btn_new_acc.pack(fill="x", padx=10, pady=(0, 14))
 
-        # Production Security & Privacy Status Box
-        self.privacy_box = ctk.CTkFrame(self.left_col, fg_color="#18181b", corner_radius=8)
-        self.privacy_box.pack(fill="x", padx=pad_x, pady=(12, 10))
-
-        info_txt = "🔒 Chế độ Bảo mật (Production Ver):\n• Thẻ thanh toán: Nhập trực tiếp trên cửa sổ Google\n• Không lưu trữ số thẻ / CVC trên mã nguồn\n• Tự động dừng tại bước thanh toán & tự chạy tiếp"
-        self.lbl_privacy_info = ctk.CTkLabel(
-            self.privacy_box, text=info_txt,
-            font=ctk.CTkFont(family="Segoe UI Variable Text", size=11),
-            text_color="#94a3b8", justify="left"
-        )
-        self.lbl_privacy_info.pack(padx=10, pady=8)
-
-    def _build_right_panel(self):
-        # Top of right panel: Step Tracker indicators
-        tracker_frame = ctk.CTkFrame(self.right_col, fg_color="transparent")
-        tracker_frame.pack(fill="x", padx=16, pady=(12, 6))
-
-        lbl_log = ctk.CTkLabel(
-            tracker_frame, text="TIẾN TRÌNH 24 THÁNG & NHẬT KÝ HOẠT ĐỘNG",
-            font=ctk.CTkFont(family="Segoe UI Variable Text", size=11, weight="bold"),
+        # Individual Layer Run
+        ctk.CTkLabel(
+            scroll, text="CHẠY RIÊNG LẺ TỪNG TẦNG (MANUAL STACKING)",
+            font=ctk.CTkFont(family=FONT_HEADING, size=11, weight="bold"),
             text_color="#a1a1aa"
-        )
-        lbl_log.pack(side="left")
+        ).pack(anchor="w", padx=10, pady=(6, 4))
 
-        # Live Progress bar
+        row_layers = ctk.CTkFrame(scroll, fg_color="transparent")
+        row_layers.pack(fill="x", padx=10, pady=2)
+
+        btn_l1 = ctk.CTkButton(
+            row_layers, text="Tầng 1 (12M)",
+            font=ctk.CTkFont(family=FONT_BODY, size=11),
+            fg_color="#1e293b", hover_color="#334155", height=32,
+            command=lambda: self._cmd_run_single_layer(1)
+        )
+        btn_l1.pack(side="left", fill="x", expand=True, padx=(0, 3))
+
+        btn_l2 = ctk.CTkButton(
+            row_layers, text="Tầng 2 (SS +6M)",
+            font=ctk.CTkFont(family=FONT_BODY, size=11),
+            fg_color="#1e293b", hover_color="#334155", height=32,
+            command=lambda: self._cmd_run_single_layer(2)
+        )
+        btn_l2.pack(side="left", fill="x", expand=True, padx=3)
+
+        btn_l3 = ctk.CTkButton(
+            row_layers, text="Tầng 3 (5TB +6M)",
+            font=ctk.CTkFont(family=FONT_BODY, size=11),
+            fg_color="#1e293b", hover_color="#334155", height=32,
+            command=lambda: self._cmd_run_single_layer(3)
+        )
+        btn_l3.pack(side="right", fill="x", expand=True, padx=(3, 0))
+
+        # Diagnostics & Utilities
+        ctk.CTkLabel(
+            scroll, text="CÔNG CỤ HỆ THỐNG & DỌN DẸP",
+            font=ctk.CTkFont(family=FONT_HEADING, size=11, weight="bold"),
+            text_color="#a1a1aa"
+        ).pack(anchor="w", padx=10, pady=(16, 4))
+
+        btn_clean_port = ctk.CTkButton(
+            scroll, text="🧹 Giải Phóng Cổng Remote CDP (Port 9320)",
+            font=ctk.CTkFont(family=FONT_BODY, size=12),
+            fg_color="#27272a", hover_color="#3f3f46", height=32,
+            command=self._cmd_clean_port_manual
+        )
+        btn_clean_port.pack(fill="x", padx=10, pady=3)
+
+        btn_open_cfg = ctk.CTkButton(
+            scroll, text="📝 Mở File Cấu Hình (config.json)",
+            font=ctk.CTkFont(family=FONT_BODY, size=12),
+            fg_color="#27272a", hover_color="#3f3f46", height=32,
+            command=self._cmd_open_config_file
+        )
+        btn_open_cfg.pack(fill="x", padx=10, pady=3)
+
+    def _build_faq_tab(self):
+        scroll = ctk.CTkScrollableFrame(self.tab_faq, fg_color="transparent")
+        scroll.pack(fill="both", expand=True, padx=2, pady=2)
+
+        faqs = [
+            ("💳 Thẻ thanh toán có bị trừ tiền không?",
+             "HOÀN TOÀN KHÔNG. Google chỉ thực hiện xác thực tạm giữ $0.00 để kiểm tra thẻ có hợp lệ không. Tiện ích Play Guard sẽ tự động chặn quy trình nếu màn hình không hiển thị chính xác US$0.00. Sau khi hoàn tất, Bước 3 sẽ hủy gia hạn và gỡ sạch thẻ."),
+            ("📱 Khi gặp xác thực 2 bước (2FA) / Captcha thì làm sao?",
+             "Ứng dụng có cảm biến thông minh tự động tạm dừng khi phát hiện màn hình 2FA, mã số trên điện thoại hoặc Captcha. Bạn chỉ cần thao tác trên điện thoại hoặc giải Captcha trên trình duyệt, ứng dụng sẽ TỰ ĐỘNG CHẠY TIẾP mà không cần bấm gì thêm."),
+            ("👨‍👩‍👧‍👦 Làm sao để chia sẻ dung lượng 5 TB cho người thân tại VN?",
+             "Sau khi xong Bước 4 (Chuyển vùng về Việt Nam), tài khoản của bạn sẽ mang hồ sơ thanh toán Việt Nam. Bạn chỉ cần vào https://one.google.com/family để mời tối đa 5 thành viên gia đình sử dụng chung dung lượng 5 TB."),
+            ("🍎 Xử lý lỗi phân quyền trên macOS?",
+             "Nếu tải file ZIP và gặp thông báo 'Không có đặc quyền truy cập', hãy tải bản file .dmg chính thức kéo vào Applications, hoặc mở Terminal gõ: chmod +x *.command *.sh"),
+            ("🪟 Xử lý lỗi 0x80070005 trên Windows?",
+             "Ứng dụng từ phiên bản v1.2.0 đã chuyển sang socket lock thuần Python, hoàn toàn không phụ thuộc vào PowerShell nên khắc phục 100% lỗi quyền.")
+        ]
+
+        for q, a in faqs:
+            card = ctk.CTkFrame(scroll, fg_color="#202023", corner_radius=8)
+            card.pack(fill="x", pady=5)
+            ctk.CTkLabel(
+                card, text=q,
+                font=ctk.CTkFont(family=FONT_HEADING, size=12, weight="bold"),
+                text_color="#38bdf8", wraplength=410, justify="left"
+            ).pack(anchor="w", padx=10, pady=(8, 2))
+            ctk.CTkLabel(
+                card, text=a,
+                font=ctk.CTkFont(family=FONT_BODY, size=11),
+                text_color="#d4d4d8", wraplength=410, justify="left"
+            ).pack(anchor="w", padx=10, pady=(0, 8))
+
+    def _build_monitor_panel(self):
+        pad_x = 14
+
+        # Real-time Checkpoint Status Card
+        self.checkpoint_card = ctk.CTkFrame(self.right_col, fg_color="#1e3a2b", corner_radius=10)
+        self.checkpoint_card.pack(fill="x", padx=pad_x, pady=(14, 8))
+
+        self.checkpoint_title = ctk.CTkLabel(
+            self.checkpoint_card,
+            text="🟢 Trạng Thái: Sẵn Sàng (Ready)",
+            font=ctk.CTkFont(family=FONT_HEADING, size=14, weight="bold"),
+            text_color="#4ade80"
+        )
+        self.checkpoint_title.pack(anchor="w", padx=14, pady=(10, 2))
+
+        self.checkpoint_desc = ctk.CTkLabel(
+            self.checkpoint_card,
+            text="Hệ thống đã nạp tiện ích và sẵn sàng. Hãy bấm 'Bắt Đầu Tự Động A - Z' hoặc 'Bước 1' để khởi chạy.",
+            font=ctk.CTkFont(family=FONT_BODY, size=11),
+            text_color="#bbf7d0",
+            wraplength=480,
+            justify="left"
+        )
+        self.checkpoint_desc.pack(anchor="w", padx=14, pady=(0, 10))
+
+        # Progress Bar with percentage label
+        prog_header = ctk.CTkFrame(self.right_col, fg_color="transparent")
+        prog_header.pack(fill="x", padx=pad_x, pady=(4, 2))
+
+        ctk.CTkLabel(
+            prog_header, text="TIẾN TRÌNH THỰC HIỆN",
+            font=ctk.CTkFont(family=FONT_BODY, size=11, weight="bold"),
+            text_color="#a1a1aa"
+        ).pack(side="left")
+
+        self.lbl_progress_pct = ctk.CTkLabel(
+            prog_header, text="0%",
+            font=ctk.CTkFont(family=FONT_BODY, size=11, weight="bold"),
+            text_color="#38bdf8"
+        )
+        self.lbl_progress_pct.pack(side="right")
+
         self.progress_bar = ctk.CTkProgressBar(self.right_col, height=8, corner_radius=4)
-        self.progress_bar.pack(fill="x", padx=16, pady=(0, 10))
+        self.progress_bar.pack(fill="x", padx=pad_x, pady=(0, 8))
         self.progress_bar.set(0.0)
+
+        # Log Header + Action Buttons
+        log_head = ctk.CTkFrame(self.right_col, fg_color="transparent")
+        log_head.pack(fill="x", padx=pad_x, pady=(4, 4))
+
+        ctk.CTkLabel(
+            log_head, text="NHẬT KÝ HOẠT ĐỘNG THỜI GIAN THỰC (LIVE LOGS)",
+            font=ctk.CTkFont(family=FONT_BODY, size=11, weight="bold"),
+            text_color="#a1a1aa"
+        ).pack(side="left")
+
+        btn_open_shots = ctk.CTkButton(
+            log_head, text="📁 Xem Ảnh Chụp",
+            font=ctk.CTkFont(family=FONT_BODY, size=11),
+            fg_color="#27272a", hover_color="#3f3f46", height=24, width=95,
+            command=self._cmd_open_screenshots_folder
+        )
+        btn_open_shots.pack(side="right", padx=(4, 0))
+
+        btn_clear = ctk.CTkButton(
+            log_head, text="🧹 Xóa Log",
+            font=ctk.CTkFont(family=FONT_BODY, size=11),
+            fg_color="#27272a", hover_color="#3f3f46", height=24, width=70,
+            command=self._cmd_clear_log
+        )
+        btn_clear.pack(side="right")
 
         # Log Text Box
         self.log_box = ctk.CTkTextbox(
             self.right_col,
-            font=ctk.CTkFont(family="Consolas", size=12),
-            fg_color="#18181b",
+            font=ctk.CTkFont(family="Consolas", size=11),
+            fg_color="#121214",
             text_color="#e4e4e7",
             corner_radius=8
         )
-        self.log_box.pack(fill="both", expand=True, padx=16, pady=(0, 14))
+        self.log_box.pack(fill="both", expand=True, padx=pad_x, pady=(0, 14))
 
-        self.append_log("INFO", "Google AI Pro 24-Month Windows 11 GUI initialized.")
-        self.append_log("INFO", "Tất cả các mốc kiểm tra (Login, Captcha, Card) đã được gắn cảm biến tự dừng và tự tiếp tục.")
+        self.append_log("INFO", f"Ứng dụng đã khởi động thành công trên {OS_DESC}.")
+        self.append_log("INFO", "Cảm biến tự động nhận diện Login, 2FA, Captcha, và Form thẻ thanh toán đang kích hoạt.")
 
     def append_log(self, tag: str, msg: str):
         ts = time.strftime("%H:%M:%S")
         color_map = {
             "INFO": "[INFO]",
             "STAGE": "[BƯỚC]",
-            "HALT_LOGIN": "[DỪNG-LOGIN]",
-            "HALT_CAPTCHA": "[DỪNG-CAPTCHA]",
+            "HALT_LOGIN": "[CHỜ-LOGIN]",
+            "HALT_CAPTCHA": "[CHỜ-CAPTCHA]",
             "RESUME_LOGIN": "[TIẾP TỤC]",
             "RESUME_CAPTCHA": "[TIẾP TỤC]",
             "SUCCESS": "[THÀNH CÔNG]",
@@ -364,17 +645,35 @@ class UniversalStackerApp(ctk.CTk):
 
     def set_checkpoint_status(self, kind: str, title: str, desc: str):
         color_map = {
-            "ready": ("#4ade80", "#1e3a2b"),
-            "halt_login": ("#fbbf24", "#3a2e1e"),
-            "halt_captcha": ("#f97316", "#3a221e"),
-            "running": ("#38bdf8", "#1e2e3a"),
-            "success": ("#4ade80", "#1e3a2b"),
-            "error": ("#f87171", "#3a1e1e")
+            "ready": ("#4ade80", "#1e3a2b", "#bbf7d0"),
+            "halt_login": ("#fbbf24", "#422006", "#fde68a"),
+            "halt_captcha": ("#f97316", "#431407", "#fed7aa"),
+            "running": ("#38bdf8", "#082f49", "#bae6fd"),
+            "success": ("#4ade80", "#064e3b", "#a7f3d0"),
+            "error": ("#f87171", "#450a0a", "#fecaca"),
+            "idle": ("#94a3b8", "#1e293b", "#cbd5e1")
         }
-        fg, bg = color_map.get(kind, ("#4ade80", "#1e3a2b"))
+        fg, bg, txt_color = color_map.get(kind, ("#4ade80", "#1e3a2b", "#bbf7d0"))
         self.checkpoint_card.configure(fg_color=bg)
         self.checkpoint_title.configure(text=title, text_color=fg)
-        self.checkpoint_desc.configure(text=desc)
+        self.checkpoint_desc.configure(text=desc, text_color=txt_color)
+
+    def set_progress(self, val: float):
+        self.progress_bar.set(val)
+        pct = int(val * 100)
+        self.lbl_progress_pct.configure(text=f"{pct}%")
+
+    def _highlight_step(self, step_index: int):
+        for i, (pill, lbl_txt) in enumerate(self.step_labels):
+            if i == step_index:
+                pill.configure(fg_color="#0369a1")
+                lbl_txt.configure(text_color="#ffffff")
+            elif i < step_index:
+                pill.configure(fg_color="#065f46")
+                lbl_txt.configure(text_color="#a7f3d0")
+            else:
+                pill.configure(fg_color="#27272a")
+                lbl_txt.configure(text_color="#71717a")
 
     def _refresh_accounts(self):
         accounts = self.cfg.get("accounts", [])
@@ -398,46 +697,51 @@ class UniversalStackerApp(ctk.CTk):
         self.append_log("INFO", f"Đã chọn phiên làm việc: {choice}")
 
     def _on_engine_event(self, event_type: str, message: str):
-        # Update logs on UI thread
         self.after(0, self.append_log, event_type, message)
 
-        # Update checkpoint indicators
         if event_type == "HALT_LOGIN":
-            self.after(0, self.set_checkpoint_status, "halt_login", "🟡 Đang chờ đăng nhập", message)
-            self.after(0, self.progress_bar.set, 0.2)
+            self.after(0, self.set_checkpoint_status, "halt_login", "🟡 Đang chờ đăng nhập & 2FA", message)
+            self.after(0, self.set_progress, 0.15)
+            self.after(0, self._highlight_step, 0)
         elif event_type == "RESUME_LOGIN":
-            self.after(0, self.set_checkpoint_status, "running", "🟢 Đã đăng nhập", "Tự động tiếp tục quy trình...")
-            self.after(0, self.progress_bar.set, 0.4)
+            self.after(0, self.set_checkpoint_status, "running", "🟢 Đã đăng nhập thành công", "Tự động tiếp tục chuyển sang bước nâng cấp...")
+            self.after(0, self.set_progress, 0.3)
+            self.after(0, self._highlight_step, 1)
             self.after(0, self._refresh_accounts)
         elif event_type == "HALT_CAPTCHA":
-            self.after(0, self.set_checkpoint_status, "halt_captcha", "🟠 Phát hiện Captcha", message)
+            self.after(0, self.set_checkpoint_status, "halt_captcha", "🟠 Tạm dừng: Giải Captcha", message)
         elif event_type == "RESUME_CAPTCHA":
-            self.after(0, self.set_checkpoint_status, "running", "🟢 Captcha đã giải xong", "Tự động tiếp tục quy trình...")
-        elif event_type == "HALT_VPN":
-            self.after(0, self.set_checkpoint_status, "halt_login", "🔴 Dừng: VPN Hoa Kỳ chưa kết nối", message)
-        elif event_type == "RESUME_VPN":
-            self.after(0, self.set_checkpoint_status, "running", "🟢 Đã kết nối VPN Hoa Kỳ (US)", message)
+            self.after(0, self.set_checkpoint_status, "running", "🟢 Captcha đã giải xong", "Tự động tiếp tục...")
         elif event_type == "HALT_CARD":
             self.after(0, self.set_checkpoint_status, "halt_login", "💳 Đang chờ nhập thông tin thẻ", message)
         elif event_type == "RESUME_CARD":
-            self.after(0, self.set_checkpoint_status, "running", "🟢 Đã nhận diện thẻ thanh toán", "Tự động tiếp tục quy trình...")
+            self.after(0, self.set_checkpoint_status, "running", "🟢 Đã nhận diện thẻ thanh toán", "Tự động tiếp tục...")
         elif event_type == "STAGE":
-            self.after(0, self.set_checkpoint_status, "running", "🔵 Đang xử lý", message)
+            self.after(0, self.set_checkpoint_status, "running", "🔵 Đang xử lý tự động", message)
             if "Layer 1" in message:
-                self.after(0, self.progress_bar.set, 0.5)
+                self.after(0, self.set_progress, 0.45)
+                self.after(0, self._highlight_step, 1)
             elif "Layer 2" in message:
-                self.after(0, self.progress_bar.set, 0.7)
+                self.after(0, self.set_progress, 0.65)
+                self.after(0, self._highlight_step, 1)
             elif "Layer 3" in message:
-                self.after(0, self.progress_bar.set, 0.85)
-            elif "Canceling" in message:
-                self.after(0, self.progress_bar.set, 0.95)
-        elif event_type == "COMPLETED" or event_type == "SUCCESS":
-            self.after(0, self.set_checkpoint_status, "success", "🎉 Hoàn tất 24 Tháng", "Đã khóa cứng mốc tháng 11/2028 và hủy phí YouTube!")
-            self.after(0, self.progress_bar.set, 1.0)
+                self.after(0, self.set_progress, 0.8)
+                self.after(0, self._highlight_step, 1)
+            elif "Canceling" in message or "Google Play" in message:
+                self.after(0, self.set_progress, 0.9)
+                self.after(0, self._highlight_step, 2)
+            elif "Việt Nam" in message:
+                self.after(0, self.set_progress, 0.95)
+                self.after(0, self._highlight_step, 3)
+        elif event_type in ["COMPLETED", "SUCCESS"]:
+            self.after(0, self.set_checkpoint_status, "success", "🎉 Hoàn Tất 24 Tháng Google AI Pro 5 TB!", "Đã khóa cứng mốc tháng 11/2028, hủy phí định kỳ và gỡ thẻ thành công.")
+            self.after(0, self.set_progress, 1.0)
+            self.after(0, self._highlight_step, 3)
             self.after(0, self._refresh_accounts)
 
     def _cmd_launch_signin(self):
         self.append_log("STAGE", f"Đang khởi tạo trình duyệt Edge hiển thị trên màn hình cho [{self.active_account_id}]...")
+        self.set_checkpoint_status("running", "🌐 Đang mở trình duyệt", "Trình duyệt đang khởi động trên màn hình của bạn...")
         eng = engine_stacker.StackingEngine(self.active_account_id, on_event=self._on_engine_event)
         threading.Thread(target=eng.launch_visible_edge, daemon=True).start()
 
@@ -447,6 +751,7 @@ class UniversalStackerApp(ctk.CTk):
             self.engine.stop()
         self.is_running = False
         self.btn_stack.configure(state="normal")
+        self.btn_all_in_one.configure(state="normal")
         self.btn_stop.configure(state="disabled")
         self.set_checkpoint_status("idle", "⏸️ Đã dừng tiến trình", "Người dùng đã chủ động dừng tự động hóa.")
 
@@ -457,10 +762,12 @@ class UniversalStackerApp(ctk.CTk):
 
         self.is_running = True
         self.btn_stack.configure(state="disabled")
+        self.btn_all_in_one.configure(state="disabled")
         self.btn_stop.configure(state="normal")
         auto_vn = bool(self.chk_auto_vn.get())
         auto_cards = bool(self.chk_auto_remove_cards.get())
-        self.append_log("STAGE", f"Bắt đầu chu trình tự động 24 tháng cho [{self.active_account_id}] (Tự đổi vùng VN: {auto_vn})...")
+        
+        self.append_log("STAGE", f"Bắt đầu chu trình tự động 24 tháng cho [{self.active_account_id}] (Tự đổi vùng VN: {auto_vn}, Tự gỡ thẻ: {auto_cards})...")
 
         def _worker():
             try:
@@ -471,6 +778,7 @@ class UniversalStackerApp(ctk.CTk):
             finally:
                 self.is_running = False
                 self.after(0, lambda: self.btn_stack.configure(state="normal"))
+                self.after(0, lambda: self.btn_all_in_one.configure(state="normal"))
                 self.after(0, lambda: self.btn_stop.configure(state="disabled"))
 
         self.worker_thread = threading.Thread(target=_worker, daemon=True)
@@ -496,6 +804,26 @@ class UniversalStackerApp(ctk.CTk):
 
         threading.Thread(target=_worker, daemon=True).start()
 
+    def _cmd_remove_cards_standalone(self):
+        self.append_log("STAGE", "Đang mở Google Payments để gỡ toàn bộ thẻ...")
+
+        def _worker():
+            try:
+                eng = engine_stacker.StackingEngine(self.active_account_id, on_event=self._on_engine_event)
+                eng.launch_visible_edge("https://play.google.com/store/paymentmethods?hl=vi")
+                time.sleep(3.5)
+                async def _sub_remove():
+                    async with async_playwright() as p:
+                        browser = await p.chromium.connect_over_cdp(f"http://127.0.0.1:{eng.port}")
+                        context = browser.contexts[0]
+                        page = context.pages[0] if context.pages else await context.new_page()
+                        await eng.remove_all_linked_cards(page)
+                asyncio.run(_sub_remove())
+            except Exception as e:
+                self._on_engine_event("ERROR", f"Lỗi gỡ thẻ: {str(e)}")
+
+        threading.Thread(target=_worker, daemon=True).start()
+
     def _cmd_switch_vn(self):
         self.append_log("STAGE", f"Đang kết nối để đổi vùng thanh toán về Việt Nam cho [{self.active_account_id}]...")
 
@@ -516,6 +844,57 @@ class UniversalStackerApp(ctk.CTk):
 
         threading.Thread(target=_worker, daemon=True).start()
 
+    def _cmd_run_single_layer(self, layer_num: int):
+        self.append_log("STAGE", f"Chạy thủ công Tầng {layer_num} cho [{self.active_account_id}]...")
+        # Runs via engine_stacker single layer
+        def _worker():
+            try:
+                eng = engine_stacker.StackingEngine(self.active_account_id, on_event=self._on_engine_event)
+                eng.launch_visible_edge()
+                time.sleep(3.5)
+                async def _sub_layer():
+                    async with async_playwright() as p:
+                        browser = await p.chromium.connect_over_cdp(f"http://127.0.0.1:{eng.port}")
+                        context = browser.contexts[0]
+                        page = context.pages[0] if context.pages else await context.new_page()
+                        if layer_num == 1:
+                            await eng.layer_1_initial_12m(page)
+                        elif layer_num == 2:
+                            await eng.layer_2_oem_samsung(page)
+                        elif layer_num == 3:
+                            await eng.layer_3_upgrade_5tb(page)
+                asyncio.run(_sub_layer())
+            except Exception as e:
+                self._on_engine_event("ERROR", f"Lỗi Tầng {layer_num}: {str(e)}")
+        threading.Thread(target=_worker, daemon=True).start()
+
+    def _cmd_clean_port_manual(self):
+        engine_stacker.clean_port(9320)
+        self.append_log("INFO", "Đã dọn dẹp và giải phóng cổng 9320.")
+
+    def _cmd_open_config_file(self):
+        if os.path.exists(CONFIG_PATH):
+            if IS_WIN:
+                os.startfile(CONFIG_PATH)
+            elif IS_MAC:
+                subprocess.Popen(["open", CONFIG_PATH])
+            else:
+                subprocess.Popen(["xdg-open", CONFIG_PATH])
+
+    def _cmd_open_screenshots_folder(self):
+        if os.path.exists(SCREENSHOTS_DIR):
+            if IS_WIN:
+                os.startfile(SCREENSHOTS_DIR)
+            elif IS_MAC:
+                subprocess.Popen(["open", SCREENSHOTS_DIR])
+            else:
+                subprocess.Popen(["xdg-open", SCREENSHOTS_DIR])
+
+    def _cmd_clear_log(self):
+        self.log_box.configure(state="normal")
+        self.log_box.delete("1.0", "end")
+        self.log_box.configure(state="disabled")
+
     def _cmd_create_new_instance(self):
         accounts = self.cfg.get("accounts", [])
         idx = len(accounts) + 1
@@ -530,12 +909,11 @@ class UniversalStackerApp(ctk.CTk):
         self.save_config()
         self._refresh_accounts()
         self.active_account_id = new_id
-        # Select in menu
         for val in self.account_menu._values:
             if val.startswith(new_id):
                 self.account_menu.set(val)
                 break
-        self.append_log("INFO", f"Đã tạo phiên mới: [{new_id}]. Bấm 'Bật cửa sổ đăng nhập' để nhập Gmail mới.")
+        self.append_log("INFO", f"Đã tạo phiên mới: [{new_id}]. Bấm 'Mở Cửa Sổ Đăng Nhập' để nhập Gmail mới.")
 
 _instance_lock_socket = None
 

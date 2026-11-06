@@ -60,6 +60,16 @@ with zipfile.ZipFile(mac_zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
                     is_exec = file.endswith((".sh", ".command", ".bat"))
                     add_file_with_unix_perms(zf, full_p, arc, is_exec=is_exec)
 
+    # Add docs directory (media clips, guides)
+    docs_dir = os.path.join(BASE_DIR, "docs")
+    if os.path.exists(docs_dir):
+        for root, dirs, files in os.walk(docs_dir):
+            for file in files:
+                full_p = os.path.join(root, file)
+                rel_p = os.path.relpath(full_p, BASE_DIR).replace("\\", "/")
+                arc = f"{prefix}/{rel_p}"
+                add_file_with_unix_perms(zf, full_p, arc, is_exec=False)
+
     # Add Google AI Pro Automator.app bundle
     app_dir = os.path.join(BASE_DIR, "Google AI Pro Automator.app")
     if os.path.exists(app_dir):
@@ -116,6 +126,16 @@ with zipfile.ZipFile(win_zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
                     arc = f"{prefix}/{rel_p}"
                     zf.write(full_p, arc)
                     
+    # Add docs
+    docs_dir = os.path.join(BASE_DIR, "docs")
+    if os.path.exists(docs_dir):
+        for root, dirs, files in os.walk(docs_dir):
+            for file in files:
+                full_p = os.path.join(root, file)
+                rel_p = os.path.relpath(full_p, BASE_DIR).replace("\\", "/")
+                arc = f"{prefix}/{rel_p}"
+                zf.write(full_p, arc)
+
     # Add extensions
     ext_dir = os.path.join(BASE_DIR, "extensions")
     if os.path.exists(ext_dir):
