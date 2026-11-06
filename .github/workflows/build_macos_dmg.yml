@@ -11,13 +11,14 @@ on:
       - 'automation_engine.py'
       - 'engine_stacker.py'
       - 'ensure_env.py'
+      - 'Google AI Pro Automator.app/**'
 
 permissions:
   contents: write
 
 jobs:
   build-macos-dmg:
-    name: Build macOS DMG Packages
+    name: Build macOS Drag-to-Applications DMG Packages
     runs-on: macos-latest
     steps:
       - name: Checkout Repository
@@ -33,53 +34,72 @@ jobs:
           python3 -m pip install --upgrade pip
           pip3 install -r requirements.txt
           pip3 install pyinstaller
-          brew install create-dmg || true
 
-      - name: Install Playwright Browsers
+      - name: Build Standalone macOS .app Bundle (Apple Silicon Native)
         run: |
-          python3 -m playwright install chromium
-
-      - name: Build Standalone macOS App Bundle (Apple Silicon)
-        run: |
-          pyinstaller --noconsole --onedir --windowed \
+          pyinstaller --noconfirm --noconsole --onedir --windowed \
             --name "Google AI Pro Automator" \
+            --osx-bundle-identifier "vn.io.tumo07.googleaiproautomator" \
             --add-data "extensions:extensions" \
             --add-data "config.example.json:." \
             --add-data "README.md:." \
             --add-data "LICENSE:." \
             --collect-all customtkinter \
             --collect-all cryptography \
+            --collect-all playwright \
+            --hidden-import "ensure_env" \
+            --hidden-import "engine_stacker" \
+            --hidden-import "automation_engine" \
             gui_app.py
 
-      - name: Package Apple Silicon Standalone DMG
-        run: |
-          mkdir -p dist/dmg_root
-          cp -r "dist/Google AI Pro Automator.app" dist/dmg_root/
-          
-          # Create Apple Silicon DMG with hdiutil
-          hdiutil create -volname "Google AI Pro Automator" -srcfolder dist/dmg_root -ov -format UDZO "dist/GoogleAIProAutomator-v1.3.1-macOS-AppleSilicon.dmg"
+          # Ad-hoc sign the .app bundle so macOS Gatekeeper sees a valid bundle structure
+          codesign --force --deep --sign - "dist/Google AI Pro Automator.app"
 
-      - name: Package Universal App DMG (Compatible with Apple Silicon & Intel)
+      - name: Package Drag-to-Applications Apple Silicon DMG
         run: |
-          mkdir -p dist/universal_dmg_root
-          
-          # Copy app bundle & source environment
-          cp -r "Google AI Pro Automator.app" dist/universal_dmg_root/
-          cp -r extensions dist/universal_dmg_root/
-          cp config.example.json dist/universal_dmg_root/
-          cp requirements.txt dist/universal_dmg_root/
-          cp *.py dist/universal_dmg_root/
-          cp *.sh dist/universal_dmg_root/
-          cp *.command dist/universal_dmg_root/
-          ln -s /Applications dist/universal_dmg_root/Applications
-          
-          chmod +x dist/universal_dmg_root/*.command dist/universal_dmg_root/*.sh dist/universal_dmg_root/"Google AI Pro Automator.app"/Contents/MacOS/launcher
-          
-          hdiutil create -volname "Google AI Pro Automator" -srcfolder dist/universal_dmg_root -ov -format UDZO "dist/GoogleAIProAutomator-v1.3.1-macOS-Universal.dmg"
-          
-          # Also supply Intel-compatible DMG asset
-          cp "dist/GoogleAIProAutomator-v1.3.1-macOS-Universal.dmg" "dist/GoogleAIProAutomator-v1.3.1-macOS-Intel.dmg"
-          
+          mkdir -p dist/dmg_arm64
+          cp -R "dist/Google AI Pro Automator.app" dist/dmg_arm64/
+          ln -s /Applications dist/dmg_arm64/Applications
+
+          hdiutil create -volname "Google AI Pro Automator" \
+            -srcfolder dist/dmg_arm64 \
+            -ov -format UDZO \
+            "dist/GoogleAIProAutomator-v1.3.1-macOS-AppleSilicon.dmg"
+
+      - name: Package Drag-to-Applications Universal & Intel DMG
+        run: |
+          mkdir -p dist/dmg_universal
+          cp -R "Google AI Pro Automator.app" dist/dmg_universal/
+
+          # Embed full self-contained payload inside Google AI Pro Automator.app/Contents/Resources/app
+          RES_APP="dist/dmg_universal/Google AI Pro Automator.app/Contents/Resources/app"
+          mkdir -p "$RES_APP"
+          cp -R extensions "$RES_APP/"
+          cp -R tools "$RES_APP/"
+          cp config.example.json "$RES_APP/"
+          if [ -f config.json ]; then cp config.json "$RES_APP/"; fi
+          cp requirements.txt "$RES_APP/"
+          cp *.py "$RES_APP/"
+          cp *.sh "$RES_APP/"
+          cp *.command "$RES_APP/"
+
+          chmod +x "dist/dmg_universal/Google AI Pro Automator.app/Contents/MacOS/launcher"
+          chmod +x "$RES_APP"/*.command "$RES_APP"/*.sh 2>/dev/null || true
+
+          # Ad-hoc sign the self-contained .app bundle
+          codesign --force --deep --sign - "dist/dmg_universal/Google AI Pro Automator.app" || true
+
+          # Create only the .app and /Applications shortcut in the DMG root
+          ln -s /Applications dist/dmg_universal/Applications
+
+          hdiutil create -volname "Google AI Pro Automator" \
+            -srcfolder dist/dmg_universal \
+            -ov -format UDZO \
+            "dist/GoogleAIProAutomator-v1.3.1-macOS-Universal.dmg"
+
+          cp "dist/GoogleAIProAutomator-v1.3.1-macOS-Universal.dmg" \
+             "dist/GoogleAIProAutomator-v1.3.1-macOS-Intel.dmg"
+
           ls -lh dist/*.dmg
 
       - name: Upload All DMG Packages to GitHub Release v1.3.1

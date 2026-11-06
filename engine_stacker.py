@@ -35,11 +35,25 @@ import ensure_env
 from playwright.async_api import async_playwright
 
 if getattr(sys, "frozen", False):
-    BASE_DIR = os.path.dirname(sys.executable)
-    RESOURCE_DIR = getattr(sys, "_MEIPASS", BASE_DIR)
+    _raw_dir = os.path.dirname(sys.executable)
+    RESOURCE_DIR = getattr(sys, "_MEIPASS", _raw_dir)
 else:
-    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-    RESOURCE_DIR = BASE_DIR
+    _raw_dir = os.path.dirname(os.path.abspath(__file__))
+    RESOURCE_DIR = _raw_dir
+
+if sys.platform == "darwin" and ".app/Contents/" in _raw_dir.replace("\\", "/"):
+    BASE_DIR = os.path.expanduser("~/Library/Application Support/GoogleAIProAutomator")
+    os.makedirs(BASE_DIR, exist_ok=True)
+    # Sync bundled extensions into ~/Library/Application Support/GoogleAIProAutomator/extensions so Chrome/Edge can load them outside .app bundle
+    _bundled_ext = os.path.join(RESOURCE_DIR, "extensions")
+    _user_ext = os.path.join(BASE_DIR, "extensions")
+    if os.path.exists(_bundled_ext) and not os.path.exists(_user_ext):
+        try:
+            shutil.copytree(_bundled_ext, _user_ext, dirs_exist_ok=True)
+        except Exception:
+            pass
+else:
+    BASE_DIR = _raw_dir
 
 CONFIG_PATH = os.path.join(BASE_DIR, "config.json")
 LOG_PATH = os.path.join(BASE_DIR, "execution.log")

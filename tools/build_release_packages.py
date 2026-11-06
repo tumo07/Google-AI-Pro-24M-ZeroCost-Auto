@@ -25,8 +25,8 @@ def add_file_with_unix_perms(zf, file_path, arc_path, is_exec=False):
         zinfo.external_attr = 0o100644 << 16  # rw-r--r--
     zf.writestr(zinfo, data)
 
-# 1. Package macOS Universal Bundle
-print("Preparing macOS Universal bundle with POSIX 0755 permissions...")
+# 1. Package Self-Contained macOS Universal .app Bundle (Drag-to-Applications)
+print("Preparing self-contained macOS Universal .app bundle with POSIX 0755 permissions...")
 mac_zip_path = os.path.join(RELEASE_OUT, "Google-AI-Pro-Automator-v1.3.1-macOS-Universal.zip")
 
 mac_files = [
@@ -38,17 +38,28 @@ mac_files = [
 ]
 
 with zipfile.ZipFile(mac_zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
-    prefix = "Google-AI-Pro-Automator-macOS"
-    
-    # Add files
+    app_prefix = "Google AI Pro Automator.app"
+    res_app_prefix = f"{app_prefix}/Contents/Resources/app"
+
+    # 1a. Add Google AI Pro Automator.app bundle skeleton (Contents/Info.plist, Contents/MacOS/launcher)
+    app_dir = os.path.join(BASE_DIR, "Google AI Pro Automator.app")
+    if os.path.exists(app_dir):
+        for root, dirs, files in os.walk(app_dir):
+            for file in files:
+                full_p = os.path.join(root, file)
+                rel_p = os.path.relpath(full_p, BASE_DIR).replace("\\", "/")
+                is_exec = (file == "launcher" or file.endswith((".sh", ".command")))
+                add_file_with_unix_perms(zf, full_p, rel_p, is_exec=is_exec)
+
+    # 1b. Embed runtime files directly inside Google AI Pro Automator.app/Contents/Resources/app/
     for fname in mac_files:
         fpath = os.path.join(BASE_DIR, fname)
         if os.path.exists(fpath):
-            arc = f"{prefix}/{fname}"
+            arc = f"{res_app_prefix}/{fname}"
             is_exec = fname.endswith((".command", ".sh"))
             add_file_with_unix_perms(zf, fpath, arc, is_exec=is_exec)
-            
-    # Add tools directory (check_dependencies, etc.)
+
+    # 1c. Embed tools directory inside Contents/Resources/app/tools/
     tools_dir = os.path.join(BASE_DIR, "tools")
     if os.path.exists(tools_dir):
         for root, dirs, files in os.walk(tools_dir):
@@ -56,39 +67,18 @@ with zipfile.ZipFile(mac_zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
                 if file.endswith((".py", ".sh", ".bat")):
                     full_p = os.path.join(root, file)
                     rel_p = os.path.relpath(full_p, BASE_DIR).replace("\\", "/")
-                    arc = f"{prefix}/{rel_p}"
+                    arc = f"{res_app_prefix}/{rel_p}"
                     is_exec = file.endswith((".sh", ".command", ".bat"))
                     add_file_with_unix_perms(zf, full_p, arc, is_exec=is_exec)
 
-    # Add docs directory (media clips, guides)
-    docs_dir = os.path.join(BASE_DIR, "docs")
-    if os.path.exists(docs_dir):
-        for root, dirs, files in os.walk(docs_dir):
-            for file in files:
-                full_p = os.path.join(root, file)
-                rel_p = os.path.relpath(full_p, BASE_DIR).replace("\\", "/")
-                arc = f"{prefix}/{rel_p}"
-                add_file_with_unix_perms(zf, full_p, arc, is_exec=False)
-
-    # Add Google AI Pro Automator.app bundle
-    app_dir = os.path.join(BASE_DIR, "Google AI Pro Automator.app")
-    if os.path.exists(app_dir):
-        for root, dirs, files in os.walk(app_dir):
-            for file in files:
-                full_p = os.path.join(root, file)
-                rel_p = os.path.relpath(full_p, BASE_DIR).replace("\\", "/")
-                arc = f"{prefix}/{rel_p}"
-                is_exec = (file == "launcher" or file.endswith((".sh", ".command")))
-                add_file_with_unix_perms(zf, full_p, arc, is_exec=is_exec)
-                
-    # Add extensions directory
+    # 1d. Embed extensions directory inside Contents/Resources/app/extensions/
     ext_dir = os.path.join(BASE_DIR, "extensions")
     if os.path.exists(ext_dir):
         for root, dirs, files in os.walk(ext_dir):
             for file in files:
                 full_p = os.path.join(root, file)
                 rel_p = os.path.relpath(full_p, BASE_DIR).replace("\\", "/")
-                arc = f"{prefix}/{rel_p}"
+                arc = f"{res_app_prefix}/{rel_p}"
                 add_file_with_unix_perms(zf, full_p, arc, is_exec=False)
 
 print(f"[OK] Created: {mac_zip_path} ({os.path.getsize(mac_zip_path) / 1024:.2f} KB)")

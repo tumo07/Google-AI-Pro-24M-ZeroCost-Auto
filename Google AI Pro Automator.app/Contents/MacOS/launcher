@@ -1,19 +1,52 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# Google AI Pro Automator — macOS App Launcher
+# Google AI Pro Automator v1.3.1 — Self-Contained macOS .app Bundle Launcher
+# Works directly when dragged to /Applications (Apple Silicon M1-M4 & Intel)
 # ==============================================================================
-APP_BUNDLE="$(cd "$(dirname "$0")/../.." && pwd)"
-PROJECT_DIR="$(cd "$APP_BUNDLE/.." && pwd)"
+set -e
 
-if [ -f "$PROJECT_DIR/Google_AI_Pro_Automator.command" ]; then
-    TARGET_DIR="$PROJECT_DIR"
+export PATH="/opt/homebrew/bin:/usr/local/bin:/Library/Frameworks/Python.framework/Versions/Current/bin:/usr/bin:/bin:/usr/sbin:/sbin:$PATH"
+
+APP_BUNDLE="$(cd "$(dirname "$0")/../.." && pwd)"
+BUNDLED_APP_DIR="$APP_BUNDLE/Contents/Resources/app"
+PARENT_DIR="$(cd "$APP_BUNDLE/.." && pwd)"
+
+if [ -f "$BUNDLED_APP_DIR/gui_app.py" ]; then
+    RUNTIME_DIR="$BUNDLED_APP_DIR"
+elif [ -f "$PARENT_DIR/gui_app.py" ]; then
+    RUNTIME_DIR="$PARENT_DIR"
 else
-    TARGET_DIR="$APP_BUNDLE"
+    osascript -e 'display alert "Google AI Pro Automator" message "Không tìm thấy dữ liệu ứng dụng bên trong gói .app!" as critical'
+    exit 1
 fi
 
-# Automatically grant execute permissions to all scripts to eliminate access privilege errors
-chmod +x "$TARGET_DIR"/*.command "$TARGET_DIR"/*.sh 2>/dev/null || true
+USER_DATA_DIR="$HOME/Library/Application Support/GoogleAIProAutomator"
+VENV_DIR="$USER_DATA_DIR/.venv"
+mkdir -p "$USER_DATA_DIR"
 
-# Launch in native Terminal with clean interactive environment
-osascript -e "tell application \"Terminal\" to do script \"cd \\\"$TARGET_DIR\\\" && ./Google_AI_Pro_Automator.command\""
-osascript -e "tell application \"Terminal\" to activate"
+# Find Python 3 with tkinter support
+PYTHON_BIN=""
+for cand in /opt/homebrew/bin/python3 /usr/local/bin/python3 /Library/Frameworks/Python.framework/Versions/Current/bin/python3 /usr/bin/python3 python3; do
+    if command -v "$cand" >/dev/null 2>&1; then
+        if "$cand" -c "import sys; assert sys.version_info >= (3, 9)" >/dev/null 2>&1; then
+            PYTHON_BIN="$cand"
+            break
+        fi
+    fi
+done
+
+if [ -z "$PYTHON_BIN" ]; then
+    osascript -e 'display alert "Thiếu Python 3 trên macOS" message "Vui lòng tải bản Standalone DMG hoặc cài đặt Python 3 (brew install python-tk) để khởi chạy." as warning'
+    exit 1
+fi
+
+# Bootstrap isolated virtual environment on first run
+if [ ! -x "$VENV_DIR/bin/python3" ] || ! "$VENV_DIR/bin/python3" -c "import customtkinter, playwright, cryptography, PIL" >/dev/null 2>&1; then
+    osascript -e 'display notification "Đang khởi tạo môi trường lần đầu cho Google AI Pro Automator (chỉ mất ~20 giây)..." with title "Google AI Pro Automator"' 2>/dev/null || true
+    "$PYTHON_BIN" -m venv "$VENV_DIR"
+    "$VENV_DIR/bin/pip" install --upgrade pip --quiet
+    "$VENV_DIR/bin/pip" install -r "$RUNTIME_DIR/requirements.txt" --quiet
+fi
+
+cd "$RUNTIME_DIR"
+exec "$VENV_DIR/bin/python3" "$RUNTIME_DIR/gui_app.py" >/dev/null 2>&1

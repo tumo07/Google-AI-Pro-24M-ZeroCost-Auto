@@ -84,12 +84,29 @@ from PIL import Image
 import ensure_env
 from playwright.async_api import async_playwright
 
-# Setup base paths (supports both source and PyInstaller frozen executable)
+# Setup base paths (supports source, Windows PyInstaller .exe, and macOS .app bundle in /Applications)
 if getattr(sys, "frozen", False):
-    BASE_DIR = os.path.dirname(sys.executable)
+    _raw_dir = os.path.dirname(sys.executable)
+    RESOURCE_DIR = getattr(sys, "_MEIPASS", _raw_dir)
 else:
-    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+    _raw_dir = os.path.dirname(os.path.abspath(__file__))
+    RESOURCE_DIR = _raw_dir
+
+if sys.platform == "darwin" and ".app/Contents/" in _raw_dir.replace("\\", "/"):
+    BASE_DIR = os.path.expanduser("~/Library/Application Support/GoogleAIProAutomator")
+    os.makedirs(BASE_DIR, exist_ok=True)
+else:
+    BASE_DIR = _raw_dir
+
 CONFIG_PATH = os.path.join(BASE_DIR, "config.json")
+if not os.path.exists(CONFIG_PATH):
+    for _cand in (os.path.join(RESOURCE_DIR, "config.json"), os.path.join(RESOURCE_DIR, "config.example.json")):
+        if os.path.exists(_cand):
+            try:
+                shutil.copy2(_cand, CONFIG_PATH)
+                break
+            except Exception:
+                pass
 SCREENSHOTS_DIR = os.path.join(BASE_DIR, "screenshots")
 os.makedirs(SCREENSHOTS_DIR, exist_ok=True)
 
