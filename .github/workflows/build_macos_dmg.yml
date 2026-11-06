@@ -22,7 +22,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: macos-14
+          - os: macos-latest
             arch: arm64
             name: AppleSilicon
           - os: macos-13
