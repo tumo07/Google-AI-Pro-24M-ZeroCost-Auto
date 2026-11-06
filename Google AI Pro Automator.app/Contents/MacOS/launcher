@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+# ==============================================================================
+# Google AI Pro Automator — macOS App Launcher
+# ==============================================================================
+APP_BUNDLE="$(cd "$(dirname "$0")/../.." && pwd)"
+PROJECT_DIR="$(cd "$APP_BUNDLE/.." && pwd)"
+
+if [ -f "$PROJECT_DIR/Google_AI_Pro_Automator.command" ]; then
+    TARGET_DIR="$PROJECT_DIR"
+else
+    TARGET_DIR="$APP_BUNDLE"
+fi
+
+# Automatically grant execute permissions to all scripts to eliminate access privilege errors
+chmod +x "$TARGET_DIR"/*.command "$TARGET_DIR"/*.sh 2>/dev/null || true
+
+# Launch in native Terminal with clean interactive environment
+osascript -e "tell application \"Terminal\" to do script \"cd \\\"$TARGET_DIR\\\" && ./Google_AI_Pro_Automator.command\""
+osascript -e "tell application \"Terminal\" to activate"

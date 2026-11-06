@@ -1,0 +1,102 @@
+name: Build macOS Standalone DMG
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/build_macos_dmg.yml'
+      - 'gui_app.py'
+      - 'automation_engine.py'
+      - 'engine_stacker.py'
+
+permissions:
+  contents: write
+
+jobs:
+  build-dmg:
+    name: Build DMG (${{ matrix.name }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-14
+            arch: arm64
+            name: AppleSilicon
+          - os: macos-13
+            arch: x86_64
+            name: Intel
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Dependencies
+        run: |
+          python3 -m pip install --upgrade pip
+          pip3 install -r requirements.txt
+          pip3 install pyinstaller
+          brew install create-dmg || true
+
+      - name: Install Playwright Browsers
+        run: |
+          python3 -m playwright install chromium
+
+      - name: Build Standalone macOS App Bundle
+        run: |
+          pyinstaller --noconsole --onedir --windowed \
+            --name "Google AI Pro Automator" \
+            --add-data "extensions:extensions" \
+            --add-data "config.example.json:." \
+            --add-data "README.md:." \
+            --add-data "LICENSE:." \
+            --collect-all customtkinter \
+            --collect-all cryptography \
+            gui_app.py
+
+      - name: Package Native macOS DMG
+        run: |
+          mkdir -p dist/dmg_root
+          cp -r "dist/Google AI Pro Automator.app" dist/dmg_root/
+          
+          DMG_NAME="GoogleAIProAutomator-v1.2.0-macOS-${{ matrix.name }}.dmg"
+          
+          # Try create-dmg first
+          create-dmg \
+            --volname "Google AI Pro Automator" \
+            --window-pos 200 120 \
+            --window-size 660 400 \
+            --icon-size 100 \
+            --icon "Google AI Pro Automator.app" 180 170 \
+            --hide-extension "Google AI Pro Automator.app" \
+            --app-drop-link 480 170 \
+            "dist/$DMG_NAME" \
+            dist/dmg_root/ || true
+
+          # If create-dmg did not produce file, use native Apple hdiutil
+          if [ ! -f "dist/$DMG_NAME" ]; then
+            echo "[*] Packaging with native Apple hdiutil..."
+            hdiutil create -volname "Google AI Pro Automator" -srcfolder dist/dmg_root -ov -format UDZO "dist/$DMG_NAME"
+          fi
+          
+          ls -lh dist/
+
+      - name: Upload DMG to Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          DMG_NAME="GoogleAIProAutomator-v1.2.0-macOS-${{ matrix.name }}.dmg"
+          if [ -f "dist/$DMG_NAME" ]; then
+            echo "[+] Uploading $DMG_NAME to GitHub Release v1.2.0..."
+            gh release upload v1.2.0 "dist/$DMG_NAME" --clobber
+          else
+            echo "[-] Error: $DMG_NAME not found!"
+            exit 1
+          fi

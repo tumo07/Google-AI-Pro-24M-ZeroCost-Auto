@@ -20,10 +20,14 @@ Người dùng có thể tải ngay các gói phần mềm đóng gói sẵn t�
 | Bản Phát Hành (Package) | Hệ Điều Hành | Chi Tiết Gói | Liên Kết Tải Nhanh (Direct Download) |
 | :--- | :--- | :--- | :--- |
 | **🪟 Windows Standalone (.exe)** | Windows 10/11 (64-bit) | Bản EXE độc lập đóng gói sẵn, **không cần cài Python**. Khắc phục triệt để lỗi phân quyền PowerShell / Windows Terminal (`0x80070005`). | [⬇️ **Tải GoogleAIProAutomator-v1.2.0-Windows-x64-Standalone.zip** (~81 MB)](https://github.com/tumo07/Google-AI-Pro-24M-ZeroCost-Auto/releases/download/v1.2.0/GoogleAIProAutomator-v1.2.0-Windows-x64-Standalone.zip) |
+| **🍎 macOS Standalone DMG (Apple Silicon)** | macOS 12+ (M1 / M2 / M3 / M4 arm64) | Bộ cài đặt đĩa ảnh `.dmg` chuẩn macOS cho Apple Silicon. Kéo thả vào Applications chạy ngay, **triệt tiêu 100% lỗi phân quyền truy cập**. | [⬇️ **Tải GoogleAIProAutomator-v1.2.0-macOS-AppleSilicon.dmg**](https://github.com/tumo07/Google-AI-Pro-24M-ZeroCost-Auto/releases/download/v1.2.0/GoogleAIProAutomator-v1.2.0-macOS-AppleSilicon.dmg) |
+| **🍎 macOS Standalone DMG (Intel)** | macOS 12+ (Intel x86_64) | Bộ cài đặt đĩa ảnh `.dmg` chuẩn macOS cho máy Mac chip Intel. | [⬇️ **Tải GoogleAIProAutomator-v1.2.0-macOS-Intel.dmg**](https://github.com/tumo07/Google-AI-Pro-24M-ZeroCost-Auto/releases/download/v1.2.0/GoogleAIProAutomator-v1.2.0-macOS-Intel.dmg) |
+| **🍎 macOS Universal Bundle (.zip)** | macOS (Apple Silicon & Intel) | Gói nén chứa file `Google AI Pro Automator.app` + `Google_AI_Pro_Automator.command` đã cấp sẵn quyền POSIX 0755. | [⬇️ **Tải Google-AI-Pro-Automator-v1.2.0-macOS-Universal.zip** (~15 MB)](https://github.com/tumo07/Google-AI-Pro-24M-ZeroCost-Auto/releases/download/v1.2.0/Google-AI-Pro-Automator-v1.2.0-macOS-Universal.zip) |
 | **🪟 Windows Portable (Python)** | Windows 10/11 (64-bit) | Bản Portable gọn nhẹ (chứa mã nguồn + file chạy `.bat`), yêu cầu máy tính đã cài đặt Python 3.10+. | [⬇️ **Tải Google-AI-Pro-Automator-v1.2.0-Windows-Portable.zip** (~15 MB)](https://github.com/tumo07/Google-AI-Pro-24M-ZeroCost-Auto/releases/download/v1.2.0/Google-AI-Pro-Automator-v1.2.0-Windows-Portable.zip) |
-| **🍎 macOS Universal (.command)** | macOS 12+ (Apple Silicon M1-M4 & Intel) | Chạy 1-click trực tiếp trên Mac qua file `Google_AI_Pro_Automator.command` trong Finder. Tự động kiểm tra Python & cài đặt môi trường. | [⬇️ **Tải Google-AI-Pro-Automator-v1.2.0-macOS-Universal.zip** (~15 MB)](https://github.com/tumo07/Google-AI-Pro-24M-ZeroCost-Auto/releases/download/v1.2.0/Google-AI-Pro-Automator-v1.2.0-macOS-Universal.zip) |
 
-> 💡 **Khuyến nghị:** Nếu bạn chỉ muốn chạy công cụ ngay lập tức trên máy tính Windows mà không muốn cài đặt Python hay cấu hình môi trường, hãy tải bản **[Windows Standalone (.exe)](https://github.com/tumo07/Google-AI-Pro-24M-ZeroCost-Auto/releases/download/v1.2.0/GoogleAIProAutomator-v1.2.0-Windows-x64-Standalone.zip)**.  
+> 💡 **Khuyến nghị:**
+> - Trên **Windows**: Nên tải bản **[Windows Standalone (.exe)](https://github.com/tumo07/Google-AI-Pro-24M-ZeroCost-Auto/releases/download/v1.2.0/GoogleAIProAutomator-v1.2.0-Windows-x64-Standalone.zip)** để chạy ngay mà không cần cấu hình Python hay phân quyền.
+> - Trên **macOS**: Nên tải bản **[macOS Standalone DMG (Apple Silicon)](https://github.com/tumo07/Google-AI-Pro-24M-ZeroCost-Auto/releases/download/v1.2.0/GoogleAIProAutomator-v1.2.0-macOS-AppleSilicon.dmg)** hoặc bản Intel tương ứng. Chỉ cần mở đĩa ảo và kéo vào `Applications`.  
 > 📌 **Truy cập Release Page:** [Xem danh sách toàn bộ các phiên bản phát hành và Changelog](https://github.com/tumo07/Google-AI-Pro-24M-ZeroCost-Auto/releases)
 
 ---
@@ -127,15 +131,27 @@ Nội dung file `config.json`:
 > Nếu Windows Terminal trên máy bạn hiển thị thông báo lỗi `[error 2147942405 (0x80070005) when launching ... powershell.exe]`, điều này do PowerShell bị chặn hoặc thiếu phân quyền hệ thống. Hãy sử dụng **Lựa chọn 1 (Bản Standalone .exe)** hoặc mở ứng dụng qua Command Prompt (`cmd.exe`). Phiên bản v1.2.0+ sử dụng cơ chế socket lock thuần Python nên hoàn toàn độc lập với PowerShell.
 
 #### 🍎 Dành cho macOS (Apple Silicon & Intel):
-- **Cách 1 (Nhanh nhất):** Nhấp đúp chuột vào file **`Google_AI_Pro_Automator.command`** trong Finder để tự động cài đặt và mở app.
-- **Cách 2 (Terminal):**
+- **Lựa chọn 1 (Bản DMG - Chuẩn macOS, Khuyên Dùng):** Tải file `.dmg` phù hợp với chip máy của bạn (`AppleSilicon.dmg` hoặc `Intel.dmg`), mở file đĩa ảo và kéo `Google AI Pro Automator.app` vào thư mục `Applications`. Nhấp đúp ứng dụng để khởi chạy.
+- **Lựa chọn 2 (Bản App Bundle / .command trong ZIP):** Mở thư mục đã giải nén và nhấp đúp vào **`Google AI Pro Automator.app`** hoặc **`Google_AI_Pro_Automator.command`**.
+- **Lựa chọn 3 (Dòng lệnh qua Terminal):**
   ```bash
-  # Chạy cài đặt môi trường tự động
+  # Cấp quyền thực thi và cài đặt môi trường
   chmod +x setup_macos.sh && ./setup_macos.sh
   
   # Khởi chạy giao diện trực quan
   ./run_gui.sh
   ```
+
+> 💡 **Khắc phục lỗi macOS "Không có đặc quyền truy cập thích hợp" (Access Privileges):**  
+> Nếu bạn tải file `.zip` và khi nhấp đúp file `.command` gặp thông báo:  
+> *"Không thể thực thi tệp Google_AI_Pro_Automator.command vì bạn không có đặc quyền truy cập thích hợp"*  
+> Nguyên nhân do trình giải nén mặc định của Mac bỏ qua cờ thực thi POSIX (`+x`). Cách xử lý trong 5 giây:  
+> 1. Mở ứng dụng **Terminal** trên Mac (`Cmd + Space` -> gõ `Terminal`).  
+> 2. Dán lệnh sau và nhấn Enter:  
+>    ```bash
+>    chmod +x ~/Downloads/Google-AI-Pro-Automator-macOS/*.command ~/Downloads/Google-AI-Pro-Automator-macOS/*.sh 2>/dev/null || chmod +x *.command *.sh
+>    ```  
+> 3. Sau đó nhấp đúp lại file `.command` hoặc mở file `.app` là sẽ chạy mượt mà ngay lập tức! (Hoặc tải trực tiếp bản **.dmg** ở bảng trên để không bao giờ gặp lỗi này).
 
 ---
 

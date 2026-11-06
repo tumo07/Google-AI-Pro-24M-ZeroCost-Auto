@@ -32,3 +32,5 @@ artifacts/
 # System
 .DS_Store
 Thumbs.db
+dist/
+release_assets/
