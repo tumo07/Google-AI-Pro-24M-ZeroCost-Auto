@@ -21,7 +21,7 @@ echo.
 echo ======================================================================
 echo.
 
-"%PY_CMD%" launch_interactive_instance.py exec %1
+%PY_CMD% launch_interactive_instance.py exec %1
 
 echo.
 pause

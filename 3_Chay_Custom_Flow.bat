@@ -24,42 +24,42 @@ set /p opt="Nhap lua chon cua ban [0-6]: "
 if "%opt%"=="0" (
     echo.
     echo Dang mo payments.google.com...
-    "%PY_CMD%" custom_stacking_flow.py profile ny
+    %PY_CMD% custom_stacking_flow.py profile ny
     pause
     goto menu
 )
 if "%opt%"=="1" (
     echo.
     echo Dang chay Layer 1...
-    "%PY_CMD%" custom_stacking_flow.py layer1
+    %PY_CMD% custom_stacking_flow.py layer1
     pause
     goto menu
 )
 if "%opt%"=="2" (
     echo.
     echo Dang chay Layer 2...
-    "%PY_CMD%" custom_stacking_flow.py layer2
+    %PY_CMD% custom_stacking_flow.py layer2
     pause
     goto menu
 )
 if "%opt%"=="3" (
     echo.
     echo Dang chay Layer 3...
-    "%PY_CMD%" custom_stacking_flow.py layer3
+    %PY_CMD% custom_stacking_flow.py layer3
     pause
     goto menu
 )
 if "%opt%"=="4" (
     echo.
     echo Dang huy gia han tu dong...
-    "%PY_CMD%" custom_stacking_flow.py cancel
+    %PY_CMD% custom_stacking_flow.py cancel
     pause
     goto menu
 )
 if "%opt%"=="5" (
     echo.
     echo Dang chay toan bo quy trinh cong don 24 thang...
-    "%PY_CMD%" custom_stacking_flow.py full
+    %PY_CMD% custom_stacking_flow.py full
     pause
     goto menu
 )

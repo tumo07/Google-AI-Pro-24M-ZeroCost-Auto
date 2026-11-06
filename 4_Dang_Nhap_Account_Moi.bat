@@ -22,7 +22,7 @@ echo He thong se tu dong nhan dien khi ban dang nhap thanh cong!
 echo ======================================================================
 echo.
 
-"%PY_CMD%" launch_interactive_instance.py launch %1
+%PY_CMD% launch_interactive_instance.py launch %1
 
 echo.
 echo Dang nhap da san sang! Ban co the chay tiep file:

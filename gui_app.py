@@ -915,22 +915,43 @@ class UniversalStackerApp(ctk.CTk):
                 break
         self.append_log("INFO", f"Đã tạo phiên mới: [{new_id}]. Bấm 'Mở Cửa Sổ Đăng Nhập' để nhập Gmail mới.")
 
-_instance_lock_socket = None
+_instance_lock_handle = None
 
 def ensure_single_instance():
+    r"""
+    Cross-platform native single instance lock:
+    - Windows: Kernel Named Mutex (Local\GoogleAIProAutomatorLock_tumo07).
+      Immune to Hyper-V / WinNAT reserved port ranges (WinError 10013),
+      firewalls, antivirus port blocks, and PowerShell permission errors.
+    - macOS / Linux: fcntl.flock on a temporary file lock.
     """
-    Pure Python socket lock. Does not rely on PowerShell, taskkill, or external shells.
-    Completely immune to 0x80070005 (Access Denied) errors on restricted Windows environments.
-    """
-    global _instance_lock_socket
-    try:
-        _instance_lock_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        _instance_lock_socket.bind(("127.0.0.1", 49832))
-        _instance_lock_socket.listen(1)
-        return True
-    except OSError:
-        print("[INFO] Một phiên bản của ứng dụng đang chạy.")
-        sys.exit(0)
+    global _instance_lock_handle
+    if sys.platform == "win32":
+        try:
+            import ctypes
+            ERROR_ALREADY_EXISTS = 183
+            _instance_lock_handle = ctypes.windll.kernel32.CreateMutexW(
+                None, False, "Local\\GoogleAIProAutomatorLock_tumo07"
+            )
+            last_err = ctypes.windll.kernel32.GetLastError()
+            if last_err == ERROR_ALREADY_EXISTS:
+                print("[INFO] Một phiên bản của ứng dụng đang chạy.")
+                sys.exit(0)
+            return True
+        except Exception:
+            # Fallback if ctypes/kernel32 has an issue
+            return True
+    else:
+        try:
+            import fcntl
+            import tempfile
+            lock_path = os.path.join(tempfile.gettempdir(), "google_ai_pro_automator.lock")
+            _instance_lock_handle = open(lock_path, "w")
+            fcntl.flock(_instance_lock_handle, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            return True
+        except (IOError, OSError):
+            print("[INFO] Một phiên bản của ứng dụng đang chạy.")
+            sys.exit(0)
 
 def run_app():
     ensure_single_instance()

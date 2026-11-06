@@ -17,7 +17,7 @@ echo    Layer 1 (12M) -^> Layer 2 (6M) -^> Layer 3 (6M) -^> Huy gia han ($0.00)
 echo ======================================================================
 echo.
 
-"%PY_CMD%" launch_interactive_instance.py full %1
+%PY_CMD% launch_interactive_instance.py full %1
 
 echo.
 pause

@@ -12,4 +12,4 @@ echo.
 call "%~dp0tools\bootstrap_env.bat"
 if %errorlevel% neq 0 exit /b %errorlevel%
 
-"%PY_CMD%" gui_app.py
+%PY_CMD% gui_app.py

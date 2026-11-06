@@ -33,4 +33,6 @@ artifacts/
 .DS_Store
 Thumbs.db
 dist/
+build/
+*.spec
 release_assets/

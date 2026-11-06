@@ -9,19 +9,24 @@ set "BOOTSTRAP_DIR=%~dp0"
 set "PROJECT_ROOT=%BOOTSTRAP_DIR%.."
 cd /d "%PROJECT_ROOT%"
 
-set "PY_CMD="
+set PY_CMD=
 
 :: 1. Check if 'python' works and is NOT the Microsoft Store placeholder stub
 python -c "import sys; sys.exit(0)" >nul 2>nul
 if %errorlevel% equ 0 (
-    set "PY_CMD=python"
+    set PY_CMD=python
     goto py_found
 )
 
 :: 2. Check if 'py' (Python Launcher) works
 py -3 -c "import sys; sys.exit(0)" >nul 2>nul
 if %errorlevel% equ 0 (
-    set "PY_CMD=py -3"
+    set PY_CMD=py -3
+    goto py_found
+)
+py -c "import sys; sys.exit(0)" >nul 2>nul
+if %errorlevel% equ 0 (
+    set PY_CMD=py
     goto py_found
 )
 
@@ -43,7 +48,7 @@ for %%D in (
     if exist "%%~D" (
         "%%~D" -c "import sys; sys.exit(0)" >nul 2>nul
         if %errorlevel% equ 0 (
-            set "PY_CMD=%%~D"
+            set PY_CMD="%%~D"
             goto py_found
         )
     )
@@ -88,7 +93,7 @@ exit /b 1
 
 :py_found
 REM Run automated package and Playwright Chromium verification
-"%PY_CMD%" "%BOOTSTRAP_DIR%check_dependencies.py"
+%PY_CMD% "%BOOTSTRAP_DIR%check_dependencies.py"
 if %errorlevel% neq 0 (
     echo.
     echo [LOI] Khong the tu dong cai dat thu vien phu thuoc!

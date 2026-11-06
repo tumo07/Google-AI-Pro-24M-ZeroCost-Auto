@@ -14,7 +14,7 @@ call "%~dp0tools\bootstrap_env.bat"
 if %errorlevel% neq 0 exit /b %errorlevel%
 
 echo Khoi chay giao dien dieu khien...
-"%PY_CMD%" gui_app.py
+%PY_CMD% gui_app.py
 if %ERRORLEVEL% NEQ 0 (
     echo.
     echo [LOI] Khong the khoi chay gui_app.py!
