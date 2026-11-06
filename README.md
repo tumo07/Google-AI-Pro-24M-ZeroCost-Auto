@@ -13,6 +13,21 @@
 
 ---
 
+## 📥 Tải Về Nhanh (Fast Direct Downloads)
+
+Người dùng có thể tải ngay các gói phần mềm đóng gói sẵn từ [Trang GitHub Releases chính thức](https://github.com/tumo07/Google-AI-Pro-24M-ZeroCost-Auto/releases) mà không cần cài đặt dòng lệnh phức tạp:
+
+| Bản Phát Hành (Package) | Hệ Điều Hành | Chi Tiết Gói | Liên Kết Tải Nhanh (Direct Download) |
+| :--- | :--- | :--- | :--- |
+| **🪟 Windows Standalone (.exe)** | Windows 10/11 (64-bit) | Bản EXE độc lập đóng gói sẵn, **không cần cài Python**. Khắc phục triệt để lỗi phân quyền PowerShell / Windows Terminal (`0x80070005`). | [⬇️ **Tải GoogleAIProAutomator-v1.2.0-Windows-x64-Standalone.zip** (~81 MB)](https://github.com/tumo07/Google-AI-Pro-24M-ZeroCost-Auto/releases/download/v1.2.0/GoogleAIProAutomator-v1.2.0-Windows-x64-Standalone.zip) |
+| **🪟 Windows Portable (Python)** | Windows 10/11 (64-bit) | Bản Portable gọn nhẹ (chứa mã nguồn + file chạy `.bat`), yêu cầu máy tính đã cài đặt Python 3.10+. | [⬇️ **Tải Google-AI-Pro-Automator-v1.2.0-Windows-Portable.zip** (~15 MB)](https://github.com/tumo07/Google-AI-Pro-24M-ZeroCost-Auto/releases/download/v1.2.0/Google-AI-Pro-Automator-v1.2.0-Windows-Portable.zip) |
+| **🍎 macOS Universal (.command)** | macOS 12+ (Apple Silicon M1-M4 & Intel) | Chạy 1-click trực tiếp trên Mac qua file `Google_AI_Pro_Automator.command` trong Finder. Tự động kiểm tra Python & cài đặt môi trường. | [⬇️ **Tải Google-AI-Pro-Automator-v1.2.0-macOS-Universal.zip** (~15 MB)](https://github.com/tumo07/Google-AI-Pro-24M-ZeroCost-Auto/releases/download/v1.2.0/Google-AI-Pro-Automator-v1.2.0-macOS-Universal.zip) |
+
+> 💡 **Khuyến nghị:** Nếu bạn chỉ muốn chạy công cụ ngay lập tức trên máy tính Windows mà không muốn cài đặt Python hay cấu hình môi trường, hãy tải bản **[Windows Standalone (.exe)](https://github.com/tumo07/Google-AI-Pro-24M-ZeroCost-Auto/releases/download/v1.2.0/GoogleAIProAutomator-v1.2.0-Windows-x64-Standalone.zip)**.  
+> 📌 **Truy cập Release Page:** [Xem danh sách toàn bộ các phiên bản phát hành và Changelog](https://github.com/tumo07/Google-AI-Pro-24M-ZeroCost-Auto/releases)
+
+---
+
 ## 🌟 Tính Năng Nổi Bật (Key Features)
 
 - **🍎 Hỗ Trợ Toàn Diện macOS (Apple Silicon M1-M4 & Intel):** Tương thích 100% trên mọi dòng máy Mac (Apple Silicon arm64 và Intel x86_64). Hỗ trợ chạy 1-click qua file `Google_AI_Pro_Automator.command` trong Finder hoặc chạy qua Terminal.
@@ -104,8 +119,12 @@ Nội dung file `config.json`:
 ### 3. Khởi chạy ứng dụng
 
 #### 🪟 Dành cho Windows:
-- Nhấp đúp vào file **`start_gui.bat`** để mở giao diện điều khiển trực quan.
-- Hoặc chạy qua PowerShell: `python gui_app.py`
+- **Lựa chọn 1 (Bản Standalone - Khuyên dùng, không cần Python):** Tải và giải nén file `GoogleAIProAutomator-v1.2.0-Windows-x64-Standalone.zip`, sau đó nhấp đúp chạy trực tiếp **`GoogleAIProAutomator.exe`**.
+- **Lựa chọn 2 (Bản Portable / Mã nguồn):** Nhấp đúp vào file **`start_gui.bat`** hoặc **`Google_AI_Pro_Tool.bat`** để mở giao diện điều khiển.
+- **Lựa chọn 3 (Dòng lệnh):** Mở terminal và chạy `python gui_app.py`.
+
+> 💡 **Khắc phục lỗi Windows Terminal `0x80070005` (Access Denied):**  
+> Nếu Windows Terminal trên máy bạn hiển thị thông báo lỗi `[error 2147942405 (0x80070005) when launching ... powershell.exe]`, điều này do PowerShell bị chặn hoặc thiếu phân quyền hệ thống. Hãy sử dụng **Lựa chọn 1 (Bản Standalone .exe)** hoặc mở ứng dụng qua Command Prompt (`cmd.exe`). Phiên bản v1.2.0+ sử dụng cơ chế socket lock thuần Python nên hoàn toàn độc lập với PowerShell.
 
 #### 🍎 Dành cho macOS (Apple Silicon & Intel):
 - **Cách 1 (Nhanh nhất):** Nhấp đúp chuột vào file **`Google_AI_Pro_Automator.command`** trong Finder để tự động cài đặt và mở app.
