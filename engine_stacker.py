@@ -218,6 +218,49 @@ exit
             time.sleep(2)
             self.emit("INFO", f"{browser_name} window launched.")
 
+    async def show_guidance_popup(self, page, badge: str, title: str, steps: list):
+        """Injects a modern, floating in-browser guidance banner to guide the user."""
+        try:
+            steps_html = "".join([f"<li style='margin-bottom:6px;'>{s}</li>" for s in steps])
+            script = f"""
+            (() => {{
+                try {{
+                    let existing = document.getElementById('google-ai-pro-guidance');
+                    if (existing) existing.remove();
+                    let div = document.createElement('div');
+                    div.id = 'google-ai-pro-guidance';
+                    div.style.position = 'fixed';
+                    div.style.top = '20px';
+                    div.style.right = '20px';
+                    div.style.maxWidth = '420px';
+                    div.style.backgroundColor = '#18181b';
+                    div.style.color = '#f4f4f5';
+                    div.style.padding = '16px 20px';
+                    div.style.borderRadius = '12px';
+                    div.style.boxShadow = '0 10px 30px rgba(0,0,0,0.6)';
+                    div.style.zIndex = '2147483647';
+                    div.style.fontFamily = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+                    div.style.border = '1px solid #38bdf8';
+                    div.innerHTML = `
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                            <span style="background:#0284c7; color:#fff; font-size:11px; font-weight:bold; padding:2px 8px; border-radius:4px;">{badge}</span>
+                            <button onclick="document.getElementById('google-ai-pro-guidance').remove()" style="background:transparent; border:none; color:#a1a1aa; cursor:pointer; font-size:16px;">✕</button>
+                        </div>
+                        <div style="font-size:14px; font-weight:bold; margin-bottom:8px; color:#38bdf8;">{title}</div>
+                        <ul style="font-size:12px; line-height:1.4; color:#e4e4e7; margin:0; padding-left:18px;">
+                            {steps_html}
+                        </ul>
+                    `;
+                    if (document.body) {{
+                        document.body.appendChild(div);
+                    }}
+                }} catch (e) {{}}
+            }})();
+            """
+            await page.evaluate(script)
+        except Exception:
+            pass
+
     async def probe_browsec_vpn_status(self, context) -> bool:
         """
         Directly probes Browsec VPN extension via Chromium's chrome.proxy.settings API.
@@ -455,12 +498,12 @@ exit
 
     async def cancel_youtube_and_lock_2028(self, page) -> bool:
         """
-        STEP 5 & YOUTUBE PROTECTION:
+        STEP 3: CANCEL AUTO-RENEWAL & PROTECT ZERO-BILLING:
         Cancels auto-renewal on Google Play Subscriptions.
-        Guarantees that YouTube Premium ($11.99 on Dec 5, 2026) is NEVER charged,
-        while locking in Google AI Pro (5 TB) until Nov 5, 2028 ($0.00).
+        Guarantees that YouTube Premium ($11.99) is NEVER charged,
+        while locking in Google AI Pro (5 TB) for full 24 months ($0.00).
         """
-        self.emit("STAGE", "🛡️ Canceling auto-renewal to lock in 2028 & eliminate YouTube Premium fee...")
+        self.emit("STAGE", "🛡️ Đang hủy gia hạn tự động trên Google Play (Bảo lưu 24T & Triệt tiêu phí phát sinh)...")
         await page.goto("https://play.google.com/store/account/subscriptions?hl=vi", wait_until="domcontentloaded", timeout=30000)
         await asyncio.sleep(4.0)
 
@@ -507,7 +550,7 @@ exit
         await asyncio.sleep(4.0)
         txt = await page.inner_text("body")
         if "Đã hủy" in txt or "Canceled" in txt or "已取消" in txt:
-            self.emit("SUCCESS", "✅ Auto-renewal cancelled successfully! No charges will occur on Dec 5, 2026. Entitlement locked until Nov 5, 2028!")
+            self.emit("SUCCESS", "✅ Đã hủy gia hạn tự động thành công! Toàn bộ quyền lợi 24 tháng được bảo lưu trọn vẹn $0.00.")
             return True
         else:
             self.emit("WARN", "Trạng thái tự động gia hạn chưa được xác nhận; vui lòng kiểm tra Google Play.")
@@ -523,10 +566,10 @@ exit
             # 1. Show in-browser guidance popup
             await self.show_guidance_popup(
                 page,
-                badge="BƯỚC 6: GỠ BỎ THẺ THANH TOÁN (100% AN TOÀN)",
+                badge="BƯỚC 3: GỠ BỎ THẺ THANH TOÁN (100% AN TOÀN)",
                 title="Gỡ bỏ toàn bộ thẻ ngân hàng đã liên kết để tránh phát sinh chi phí",
                 steps=[
-                    "Gói 5 TB Google AI Pro đã được khóa đến năm 2028 và hủy gia hạn tự động.",
+                    "Gói 5 TB Google AI Pro 24 tháng đã được kích hoạt thành công và hủy gia hạn tự động.",
                     "Bước này giúp bạn gỡ thẻ ngân hàng khỏi Google để triệt tiêu 100% rủi ro bị trừ tiền.",
                     "Hệ thống đang mở trang Quản lý phương thức thanh toán...",
                     "Bấm 'Xóa' (Remove) trên các thẻ đã liên kết hoặc bấm 'Đóng hồ sơ thanh toán' nếu được hỏi."
@@ -716,7 +759,7 @@ exit
             await automator.ensure_subscription_active(page)
 
             # Checkpoint 5: Layer 2 (6M SS)
-            self.emit("STAGE", "Executing Layer 2: +6 Month Stack (Target: May 2028 - $0.00)...")
+            self.emit("STAGE", "Kích hoạt Tầng 2: Cộng dồn ưu đãi OEM Samsung (+6 Tháng - $0.00)...")
             await self.check_and_handle_captcha(page)
             await self.check_and_handle_vpn(page)
             if self.stop_requested:
@@ -745,7 +788,7 @@ exit
             await automator.ensure_subscription_active(page)
 
             # Checkpoint 6: Layer 3 (6M Pixel)
-            self.emit("STAGE", "Executing Layer 3: +6 Month Stack (Target: Nov 2028 - $0.00)...")
+            self.emit("STAGE", "Kích hoạt Tầng 3: Nâng cấp gói Pixel 5 TB (+6 Tháng - $0.00)...")
             await self.check_and_handle_captcha(page)
             await self.check_and_handle_vpn(page)
             if self.stop_requested:
@@ -781,7 +824,7 @@ exit
             if auto_remove_cards and not self.stop_requested:
                 await self.remove_all_linked_cards(page)
 
-            self.emit("COMPLETED", f"🎉 CONGRATULATIONS! Account {email} is fully stacked to 24 Months (Nov 5, 2028) at $0.00, cards unlinked, and ready for Vietnam Family Sharing!")
+            self.emit("COMPLETED", f"🎉 HOÀN TẤT THÀNH CÔNG! Tài khoản {email} đã được cộng dồn trọn vẹn 24 Tháng Google AI Pro (5 TB) với giá $0.00, đã hủy gia hạn định kỳ và gỡ sạch thẻ an toàn!")
 
 if __name__ == "__main__":
     eng = StackingEngine("Account_1")
