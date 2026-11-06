@@ -17,6 +17,58 @@ a comprehensive real-time checkpoint monitor and zero-billing protection.
 
 import os
 import sys
+import shutil
+import multiprocessing
+
+# 1. CRITICAL ANTI-FORK-BOMB CIRCUIT BREAKER (Must run BEFORE any other imports!)
+if __name__ == "__main__":
+    multiprocessing.freeze_support()
+
+if getattr(sys, "frozen", False) and any(arg in ("-m", "pip", "playwright") for arg in sys.argv[1:]):
+    os._exit(0)
+
+_instance_lock_handle = None
+
+def ensure_single_instance():
+    r"""
+    Cross-platform native single instance lock (executed BEFORE heavy imports):
+    - Windows: Kernel Named Mutex (Local\GoogleAIProAutomatorLock_tumo07).
+      Immune to Hyper-V / WinNAT reserved port ranges (WinError 10013),
+      firewalls, antivirus port blocks, and PowerShell permission errors.
+    - macOS / Linux: fcntl.flock on a temporary file lock.
+    """
+    global _instance_lock_handle
+    if _instance_lock_handle is not None:
+        return True
+    if sys.platform == "win32":
+        try:
+            import ctypes
+            ERROR_ALREADY_EXISTS = 183
+            _instance_lock_handle = ctypes.windll.kernel32.CreateMutexW(
+                None, False, "Local\\GoogleAIProAutomatorLock_tumo07"
+            )
+            last_err = ctypes.windll.kernel32.GetLastError()
+            if last_err == ERROR_ALREADY_EXISTS:
+                print("[INFO] Một phiên bản của ứng dụng đang chạy.")
+                os._exit(0)
+            return True
+        except Exception:
+            return True
+    else:
+        try:
+            import fcntl
+            import tempfile
+            lock_path = os.path.join(tempfile.gettempdir(), "google_ai_pro_automator.lock")
+            _instance_lock_handle = open(lock_path, "w")
+            fcntl.flock(_instance_lock_handle, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            return True
+        except (IOError, OSError):
+            print("[INFO] Một phiên bản của ứng dụng đang chạy.")
+            os._exit(0)
+
+if __name__ == "__main__":
+    ensure_single_instance()
+
 import json
 import time
 import threading
@@ -32,8 +84,11 @@ from PIL import Image
 import ensure_env
 from playwright.async_api import async_playwright
 
-# Setup base paths
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+# Setup base paths (supports both source and PyInstaller frozen executable)
+if getattr(sys, "frozen", False):
+    BASE_DIR = os.path.dirname(sys.executable)
+else:
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 CONFIG_PATH = os.path.join(BASE_DIR, "config.json")
 SCREENSHOTS_DIR = os.path.join(BASE_DIR, "screenshots")
 os.makedirs(SCREENSHOTS_DIR, exist_ok=True)
@@ -101,6 +156,16 @@ class UniversalStackerApp(ctk.CTk):
         self._build_ui()
         self._refresh_accounts()
         _apply_fluent_theme(self)
+        self.protocol("WM_DELETE_WINDOW", self._on_close)
+
+    def _on_close(self):
+        try:
+            if self.engine:
+                self.engine.stop()
+            self.destroy()
+        except Exception:
+            pass
+        os._exit(0)
 
     def load_config(self) -> Dict[str, Any]:
         if os.path.exists(CONFIG_PATH):
@@ -745,12 +810,23 @@ class UniversalStackerApp(ctk.CTk):
                 pill.configure(fg_color="#27272a")
                 lbl_txt.configure(text_color="#71717a")
 
+    def _get_profile_dir(self, account_id: str) -> str:
+        return os.path.join(BASE_DIR, "profiles", f"profile_{account_id.lower()}")
+
+    def _clean_profile_dirs(self, account_id: str):
+        for p in (
+            self._get_profile_dir(account_id),
+            os.path.join(BASE_DIR, "profiles", account_id),
+        ):
+            if os.path.exists(p):
+                shutil.rmtree(p, ignore_errors=True)
+
     def _refresh_accounts(self):
         accounts = self.cfg.get("accounts", [])
         if not accounts:
             self.account_menu.configure(values=["Account_1 (Chưa đăng nhập)"])
             if hasattr(self, "lbl_acc_info"):
-                self.lbl_acc_info.configure(text="📍 Đang chọn: Account_1 | Thư mục: profiles/Account_1")
+                self.lbl_acc_info.configure(text="📍 Đang chọn: Account_1 | Thư mục: profiles/profile_account_1")
             return
             
         vals = []
@@ -760,7 +836,7 @@ class UniversalStackerApp(ctk.CTk):
             vals.append(f"{aid} ({em})")
             
         self.account_menu.configure(values=vals)
-        cur_matched = [v for v in vals if v.startswith(self.active_account_id)]
+        cur_matched = [v for v in vals if v.split()[0] == self.active_account_id]
         if cur_matched:
             self.account_menu.set(cur_matched[0])
             self._update_acc_info_label(cur_matched[0])
@@ -772,7 +848,7 @@ class UniversalStackerApp(ctk.CTk):
     def _update_acc_info_label(self, choice: str):
         if hasattr(self, "lbl_acc_info"):
             aid = choice.split()[0]
-            self.lbl_acc_info.configure(text=f"📍 Đang chọn: {aid} | Thư mục: profiles/{aid}")
+            self.lbl_acc_info.configure(text=f"📍 Đang chọn: {aid} | Thư mục: profiles/profile_{aid.lower()}")
 
     def _on_account_selected(self, choice: str):
         aid = choice.split()[0]
@@ -824,7 +900,7 @@ class UniversalStackerApp(ctk.CTk):
             self.after(0, self._refresh_accounts)
 
     def _cmd_launch_signin(self):
-        self.append_log("STAGE", f"Đang khởi tạo trình duyệt Edge hiển thị trên màn hình cho [{self.active_account_id}]...")
+        self.append_log("STAGE", f"Đang khởi tạo trình duyệt hiển thị trên màn hình cho [{self.active_account_id}]...")
         self.set_checkpoint_status("running", "🌐 Đang mở trình duyệt", "Trình duyệt đang khởi động trên màn hình của bạn...")
         eng = engine_stacker.StackingEngine(self.active_account_id, on_event=self._on_engine_event)
         threading.Thread(target=eng.launch_visible_edge, daemon=True).start()
@@ -869,13 +945,17 @@ class UniversalStackerApp(ctk.CTk):
         self.worker_thread.start()
 
     def _cmd_cancel_renewal(self):
+        if self.is_running:
+            self.append_log("WARN", "Quy trình đang chạy, vui lòng đợi hoàn tất...")
+            return
+        self.is_running = True
         self.append_log("STAGE", "Đang kết nối để hủy gia hạn bảo vệ tài khoản (Hủy gia hạn định kỳ & Bảo lưu thời hạn)...")
 
         def _worker():
             try:
                 eng = engine_stacker.StackingEngine(self.active_account_id, on_event=self._on_engine_event)
-                eng.launch_visible_edge("https://play.google.com/store/account/subscriptions?hl=vi")
-                time.sleep(3.5)
+                eng.launch_visible_edge("https://play.google.com/store/account/subscriptions?hl=vi", reuse_if_open=True)
+                time.sleep(2.5)
                 async def _sub_cancel():
                     async with async_playwright() as p:
                         browser = await p.chromium.connect_over_cdp(f"http://127.0.0.1:{eng.port}")
@@ -885,17 +965,23 @@ class UniversalStackerApp(ctk.CTk):
                 asyncio.run(_sub_cancel())
             except Exception as e:
                 self._on_engine_event("ERROR", f"Lỗi hủy gia hạn: {str(e)}")
+            finally:
+                self.is_running = False
 
         threading.Thread(target=_worker, daemon=True).start()
 
     def _cmd_remove_cards_standalone(self):
+        if self.is_running:
+            self.append_log("WARN", "Quy trình đang chạy, vui lòng đợi hoàn tất...")
+            return
+        self.is_running = True
         self.append_log("STAGE", "Đang mở Google Payments để gỡ toàn bộ thẻ...")
 
         def _worker():
             try:
                 eng = engine_stacker.StackingEngine(self.active_account_id, on_event=self._on_engine_event)
-                eng.launch_visible_edge("https://play.google.com/store/paymentmethods?hl=vi")
-                time.sleep(3.5)
+                eng.launch_visible_edge("https://play.google.com/store/paymentmethods?hl=vi", reuse_if_open=True)
+                time.sleep(2.5)
                 async def _sub_remove():
                     async with async_playwright() as p:
                         browser = await p.chromium.connect_over_cdp(f"http://127.0.0.1:{eng.port}")
@@ -905,17 +991,23 @@ class UniversalStackerApp(ctk.CTk):
                 asyncio.run(_sub_remove())
             except Exception as e:
                 self._on_engine_event("ERROR", f"Lỗi gỡ thẻ: {str(e)}")
+            finally:
+                self.is_running = False
 
         threading.Thread(target=_worker, daemon=True).start()
 
     def _cmd_switch_vn(self):
+        if self.is_running:
+            self.append_log("WARN", "Quy trình đang chạy, vui lòng đợi hoàn tất...")
+            return
+        self.is_running = True
         self.append_log("STAGE", f"Đang kết nối để đổi vùng thanh toán về Việt Nam cho [{self.active_account_id}]...")
 
         def _worker():
             try:
                 eng = engine_stacker.StackingEngine(self.active_account_id, on_event=self._on_engine_event)
-                eng.launch_visible_edge("https://payments.google.com/gp/w/u/0/home/settings?hl=vi")
-                time.sleep(3.5)
+                eng.launch_visible_edge("https://payments.google.com/gp/w/u/0/home/settings?hl=vi", reuse_if_open=True)
+                time.sleep(2.5)
                 async def _sub_vn():
                     async with async_playwright() as p:
                         browser = await p.chromium.connect_over_cdp(f"http://127.0.0.1:{eng.port}")
@@ -925,17 +1017,22 @@ class UniversalStackerApp(ctk.CTk):
                 asyncio.run(_sub_vn())
             except Exception as e:
                 self._on_engine_event("ERROR", f"Lỗi chuyển vùng: {str(e)}")
+            finally:
+                self.is_running = False
 
         threading.Thread(target=_worker, daemon=True).start()
 
     def _cmd_run_single_layer(self, layer_num: int):
+        if self.is_running:
+            self.append_log("WARN", "Quy trình đang chạy, vui lòng đợi hoàn tất...")
+            return
+        self.is_running = True
         self.append_log("STAGE", f"Chạy thủ công Tầng {layer_num} cho [{self.active_account_id}]...")
-        # Runs via engine_stacker single layer
         def _worker():
             try:
                 eng = engine_stacker.StackingEngine(self.active_account_id, on_event=self._on_engine_event)
-                eng.launch_visible_edge()
-                time.sleep(3.5)
+                eng.launch_visible_edge(reuse_if_open=True)
+                time.sleep(2.5)
                 async def _sub_layer():
                     async with async_playwright() as p:
                         browser = await p.chromium.connect_over_cdp(f"http://127.0.0.1:{eng.port}")
@@ -950,6 +1047,8 @@ class UniversalStackerApp(ctk.CTk):
                 asyncio.run(_sub_layer())
             except Exception as e:
                 self._on_engine_event("ERROR", f"Lỗi Tầng {layer_num}: {str(e)}")
+            finally:
+                self.is_running = False
         threading.Thread(target=_worker, daemon=True).start()
 
     def _cmd_clean_port_manual(self):
@@ -980,8 +1079,11 @@ class UniversalStackerApp(ctk.CTk):
         self.log_box.configure(state="disabled")
 
     def _cmd_create_new_instance(self):
-        accounts = self.cfg.get("accounts", [])
-        idx = len(accounts) + 1
+        accounts = self.cfg.setdefault("accounts", [])
+        existing_ids = {a.get("id") for a in accounts}
+        idx = 1
+        while f"Account_{idx}" in existing_ids:
+            idx += 1
         new_id = f"Account_{idx}"
         new_acc = {
             "id": new_id,
@@ -989,7 +1091,7 @@ class UniversalStackerApp(ctk.CTk):
             "status": "pending_login",
             "current_step": 0
         }
-        self.cfg.setdefault("accounts", []).append(new_acc)
+        accounts.append(new_acc)
         self.save_config()
         self.active_account_id = new_id
         self._refresh_accounts()
@@ -998,23 +1100,23 @@ class UniversalStackerApp(ctk.CTk):
     def _cmd_delete_account(self):
         accounts = self.cfg.get("accounts", [])
         target_id = self.active_account_id
+        if engine_stacker.StackingEngine._active_cdp_account == target_id:
+            engine_stacker.clean_port(9320)
+            engine_stacker.StackingEngine._active_cdp_account = None
+
         if len(accounts) <= 1:
             if accounts:
                 accounts[0]["email"] = ""
                 accounts[0]["status"] = "pending_login"
                 accounts[0]["current_step"] = 0
-            profile_dir = os.path.join(BASE_DIR, "profiles", target_id)
-            if os.path.exists(profile_dir):
-                shutil.rmtree(profile_dir, ignore_errors=True)
+            self._clean_profile_dirs(target_id)
             self.save_config()
             self._refresh_accounts()
             self.append_log("INFO", f"Đã làm sạch dữ liệu và reset [{target_id}] về mặc định.")
             return
 
         self.cfg["accounts"] = [a for a in accounts if a.get("id") != target_id]
-        profile_dir = os.path.join(BASE_DIR, "profiles", target_id)
-        if os.path.exists(profile_dir):
-            shutil.rmtree(profile_dir, ignore_errors=True)
+        self._clean_profile_dirs(target_id)
         self.save_config()
         remaining = self.cfg.get("accounts", [])
         self.active_account_id = remaining[0]["id"] if remaining else "Account_1"
@@ -1023,12 +1125,11 @@ class UniversalStackerApp(ctk.CTk):
 
     def _cmd_reset_account_session(self):
         target_id = self.active_account_id
-        profile_dir = os.path.join(BASE_DIR, "profiles", target_id)
-        if os.path.exists(profile_dir):
-            try:
-                shutil.rmtree(profile_dir, ignore_errors=True)
-            except Exception as e:
-                self.append_log("WARN", f"Không thể xóa toàn bộ file cache: {e}")
+        if engine_stacker.StackingEngine._active_cdp_account == target_id:
+            engine_stacker.clean_port(9320)
+            engine_stacker.StackingEngine._active_cdp_account = None
+
+        self._clean_profile_dirs(target_id)
         for a in self.cfg.get("accounts", []):
             if a.get("id") == target_id:
                 a["status"] = "pending_login"
@@ -1041,7 +1142,7 @@ class UniversalStackerApp(ctk.CTk):
 
     def _cmd_open_profile_folder(self):
         target_id = self.active_account_id
-        profile_dir = os.path.join(BASE_DIR, "profiles", target_id)
+        profile_dir = self._get_profile_dir(target_id)
         os.makedirs(profile_dir, exist_ok=True)
         if IS_WIN:
             os.startfile(profile_dir)
@@ -1049,44 +1150,6 @@ class UniversalStackerApp(ctk.CTk):
             subprocess.Popen(["open", profile_dir])
         else:
             subprocess.Popen(["xdg-open", profile_dir])
-
-_instance_lock_handle = None
-
-def ensure_single_instance():
-    r"""
-    Cross-platform native single instance lock:
-    - Windows: Kernel Named Mutex (Local\GoogleAIProAutomatorLock_tumo07).
-      Immune to Hyper-V / WinNAT reserved port ranges (WinError 10013),
-      firewalls, antivirus port blocks, and PowerShell permission errors.
-    - macOS / Linux: fcntl.flock on a temporary file lock.
-    """
-    global _instance_lock_handle
-    if sys.platform == "win32":
-        try:
-            import ctypes
-            ERROR_ALREADY_EXISTS = 183
-            _instance_lock_handle = ctypes.windll.kernel32.CreateMutexW(
-                None, False, "Local\\GoogleAIProAutomatorLock_tumo07"
-            )
-            last_err = ctypes.windll.kernel32.GetLastError()
-            if last_err == ERROR_ALREADY_EXISTS:
-                print("[INFO] Một phiên bản của ứng dụng đang chạy.")
-                sys.exit(0)
-            return True
-        except Exception:
-            # Fallback if ctypes/kernel32 has an issue
-            return True
-    else:
-        try:
-            import fcntl
-            import tempfile
-            lock_path = os.path.join(tempfile.gettempdir(), "google_ai_pro_automator.lock")
-            _instance_lock_handle = open(lock_path, "w")
-            fcntl.flock(_instance_lock_handle, fcntl.LOCK_EX | fcntl.LOCK_NB)
-            return True
-        except (IOError, OSError):
-            print("[INFO] Một phiên bản của ứng dụng đang chạy.")
-            sys.exit(0)
 
 def run_app():
     ensure_single_instance()

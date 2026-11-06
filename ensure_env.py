@@ -20,14 +20,26 @@ REQUIRED_PACKAGES = [
     ("playwright", "playwright>=1.40.0"),
     ("customtkinter", "customtkinter>=5.2.0"),
     ("cryptography", "cryptography>=41.0.0"),
-    ("requests", "requests>=2.31.0"),
-    ("fastapi", "fastapi>=0.100.0"),
-    ("uvicorn", "uvicorn>=0.22.0"),
-    ("pydantic", "pydantic>=2.0.0"),
     ("PIL", "pillow>=10.0.0")
 ]
 
+def _is_frozen_or_non_python() -> bool:
+    """Returns True if running inside a PyInstaller/frozen binary or if sys.executable is not a Python interpreter."""
+    if getattr(sys, "frozen", False) or hasattr(sys, "_MEIPASS"):
+        return True
+    exe_name = os.path.basename(sys.executable or "").lower()
+    if not (exe_name.startswith("python") or exe_name.startswith("py")):
+        return True
+    return False
+
 def auto_ensure_environment():
+    # CRITICAL SAFETY GUARD: Never spawn subprocesses with sys.executable inside a frozen .exe (prevents fork bomb)
+    if _is_frozen_or_non_python():
+        return
+    if os.environ.get("GOOGLE_AI_PRO_ENV_CHECKED") == "1":
+        return
+    os.environ["GOOGLE_AI_PRO_ENV_CHECKED"] = "1"
+
     missing = []
     for mod_name, pkg_spec in REQUIRED_PACKAGES:
         try:
@@ -45,7 +57,6 @@ def auto_ensure_environment():
         print("----------------------------------------------------------------------")
         
         try:
-            subprocess.run([sys.executable, "-m", "pip", "install", "--upgrade", "pip", "--quiet"], check=False)
             req_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), "requirements.txt")
             if os.path.exists(req_file):
                 subprocess.check_call([sys.executable, "-m", "pip", "install", "-r", req_file])
@@ -56,21 +67,5 @@ def auto_ensure_environment():
             print(f"[-] Error installing Python dependencies: {e}")
             print("[-] Continuing startup...")
 
-    # Check and install Playwright Chromium browser engine
-    try:
-        from playwright.sync_api import sync_playwright
-        with sync_playwright() as p:
-            exe = p.chromium.executable_path
-            if not exe or not os.path.exists(exe):
-                raise FileNotFoundError("Chromium driver not found")
-    except Exception:
-        print("[*] Playwright Chromium browser driver is missing.")
-        print("[*] Automatically downloading Playwright Chromium (one-time setup)...")
-        try:
-            subprocess.check_call([sys.executable, "-m", "playwright", "install", "chromium"])
-            print("[+] Playwright Chromium browser installed successfully!")
-        except Exception as err:
-            print(f"[-] Warning: Failed to install Playwright Chromium: {err}")
-
-# Execute self-check immediately upon module import
+# Execute self-check once upon module import (no-op in frozen .exe)
 auto_ensure_environment()

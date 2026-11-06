@@ -15,13 +15,18 @@ REQUIRED_MODULES = [
     "customtkinter",
     "playwright",
     "cryptography",
-    "requests",
-    "fastapi",
-    "uvicorn",
-    "pydantic"
+    "PIL"
 ]
 
+def _is_frozen_or_non_python() -> bool:
+    if getattr(sys, "frozen", False) or hasattr(sys, "_MEIPASS"):
+        return True
+    exe_name = os.path.basename(sys.executable or "").lower()
+    return not (exe_name.startswith("python") or exe_name.startswith("py"))
+
 def check_and_install_python_packages():
+    if _is_frozen_or_non_python():
+        return True
     missing = []
     for mod in REQUIRED_MODULES:
         try:
@@ -50,29 +55,25 @@ def check_and_install_python_packages():
     return True
 
 def check_and_install_playwright():
-    try:
-        from playwright.sync_api import sync_playwright
-        with sync_playwright() as p:
-            # Quick check if chromium executable path is available
-            try:
-                # Launch a dummy headless instance or check executable path
-                exe_path = p.chromium.executable_path
-                if not exe_path or not os.path.exists(exe_path):
-                    raise FileNotFoundError("Chromium driver binary not found")
-            except Exception:
-                print("[*] Playwright Chromium browser driver is missing.")
-                print("[*] Automatically downloading and installing Playwright Chromium...")
-                subprocess.check_call([sys.executable, "-m", "playwright", "install", "chromium"])
-                print("[+] Playwright Chromium installed successfully!")
-    except Exception as e:
-        print(f"[-] Playwright check warning: {e}")
-        try:
-            print("[*] Attempting to install Playwright Chromium driver...")
-            subprocess.check_call([sys.executable, "-m", "playwright", "install", "chromium"])
-            print("[+] Playwright Chromium installed successfully!")
-        except Exception as err:
-            print(f"[-] Could not install Playwright Chromium: {err}")
-            return False
+    if _is_frozen_or_non_python():
+        return True
+    # Check if system Edge or Chrome is already installed (used via CDP)
+    if sys.platform == "win32":
+        candidates = [
+            r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe",
+            r"C:\Program Files\Microsoft\Edge\Application\msedge.exe",
+            r"C:\Program Files\Google\Chrome\Application\chrome.exe",
+            r"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe",
+        ]
+        if any(os.path.exists(p) for p in candidates):
+            return True
+    elif sys.platform == "darwin":
+        candidates = [
+            "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+            "/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge",
+        ]
+        if any(os.path.exists(p) for p in candidates):
+            return True
     return True
 
 def main():

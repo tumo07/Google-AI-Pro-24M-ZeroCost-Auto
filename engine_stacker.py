@@ -34,21 +34,31 @@ from typing import Optional, Callable, Dict, Any
 import ensure_env
 from playwright.async_api import async_playwright
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+if getattr(sys, "frozen", False):
+    BASE_DIR = os.path.dirname(sys.executable)
+    RESOURCE_DIR = getattr(sys, "_MEIPASS", BASE_DIR)
+else:
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+    RESOURCE_DIR = BASE_DIR
+
 CONFIG_PATH = os.path.join(BASE_DIR, "config.json")
 LOG_PATH = os.path.join(BASE_DIR, "execution.log")
-ARTIFACTS_DIR = r"C:\Users\khoa\.gemini\antigravity\brain\bdb8ac8f-261e-4351-8267-5fe6b7181fb3"
+ARTIFACTS_DIR = os.path.join(BASE_DIR, "screenshots")
+os.makedirs(ARTIFACTS_DIR, exist_ok=True)
 
 import automation_engine
 
-def clean_port(port: int):
+def clean_port(port: int) -> bool:
+    killed_any = False
     if sys.platform == "win32":
         try:
             p = subprocess.run(f"netstat -ano | findstr :{port}", shell=True, capture_output=True, text=True)
             for line in p.stdout.splitlines():
                 if "LISTENING" in line:
                     pid = line.strip().split()[-1]
-                    subprocess.run(f"taskkill /F /T /PID {pid}", shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                    if pid.isdigit() and int(pid) > 0:
+                        subprocess.run(f"taskkill /F /T /PID {pid}", shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                        killed_any = True
         except Exception:
             pass
     else:
@@ -58,14 +68,21 @@ def clean_port(port: int):
                 if pid.strip():
                     try:
                         os.kill(int(pid.strip()), signal.SIGKILL)
+                        killed_any = True
                     except Exception:
                         pass
         except Exception:
             pass
+    if killed_any:
+        time.sleep(1.2)
+    return killed_any
 
 def log_to_file(msg: str):
-    with open(LOG_PATH, "a", encoding="utf-8") as f:
-        f.write(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] {msg}\n")
+    try:
+        with open(LOG_PATH, "a", encoding="utf-8") as f:
+            f.write(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] {msg}\n")
+    except Exception:
+        pass
 
 def prepare_browser_profile(profile_dir: str):
     """
@@ -73,6 +90,13 @@ def prepare_browser_profile(profile_dir: str):
     unpacked extension prompts on both Microsoft Edge and Google Chrome.
     """
     try:
+        for lock_name in ("SingletonLock", "SingletonCookie", "SingletonSocket"):
+            lock_path = os.path.join(profile_dir, lock_name)
+            if os.path.exists(lock_path):
+                try:
+                    os.remove(lock_path)
+                except Exception:
+                    pass
         def_dir = os.path.join(profile_dir, "Default")
         os.makedirs(def_dir, exist_ok=True)
         pref_file = os.path.join(def_dir, "Preferences")
@@ -101,6 +125,8 @@ def prepare_edge_profile(profile_dir: str):
     return prepare_browser_profile(profile_dir)
 
 class StackingEngine:
+    _active_cdp_account: Optional[str] = None
+
     def __init__(self, account_id: str = "Account_1", on_event: Optional[Callable[[str, str], None]] = None):
         self.account_id = account_id
         self.on_event_cb = on_event
@@ -125,8 +151,11 @@ class StackingEngine:
 
     def _load_config(self) -> Dict[str, Any]:
         if os.path.exists(CONFIG_PATH):
-            with open(CONFIG_PATH, "r", encoding="utf-8") as f:
-                return json.load(f)
+            try:
+                with open(CONFIG_PATH, "r", encoding="utf-8") as f:
+                    return json.load(f)
+            except Exception:
+                pass
         return {"accounts": [], "card": {}}
 
     def _get_account_data(self) -> Dict[str, Any]:
@@ -149,15 +178,33 @@ class StackingEngine:
         self.stop_requested = True
         self.emit("WARN", "🛑 Đã nhận yêu cầu dừng từ người dùng.")
 
-    def launch_visible_edge(self, start_url: str = "https://accounts.google.com/ServiceLogin?hl=vi&continue=https%3A%2F%2Fone.google.com%2Fplans%3Fhl%3Dvi"):
+    def _is_cdp_ready(self) -> bool:
+        import urllib.request
+        try:
+            with urllib.request.urlopen(f"http://127.0.0.1:{self.port}/json/version", timeout=0.8) as resp:
+                return resp.status == 200
+        except Exception:
+            return False
+
+    def _resolve_ext_dir(self, folder_name: str) -> str:
+        p1 = os.path.join(BASE_DIR, "extensions", folder_name)
+        if os.path.exists(p1):
+            return p1
+        return os.path.join(RESOURCE_DIR, "extensions", folder_name)
+
+    def launch_visible_edge(self, start_url: str = "https://accounts.google.com/ServiceLogin?hl=vi&continue=https%3A%2F%2Fone.google.com%2Fplans%3Fhl%3Dvi", reuse_if_open: bool = False):
         """Launches Google Chrome / Edge on macOS Desktop (Aqua) or Windows Desktop (Session 1) with Browsec & Injector."""
+        if reuse_if_open and StackingEngine._active_cdp_account == self.account_id and self._is_cdp_ready():
+            self.emit("INFO", f"♻️ Đang tái sử dụng cửa sổ trình duyệt đang mở của [{self.account_id}].")
+            return
+
         clean_port(self.port)
         prepare_edge_profile(self.profile_dir)
         
-        vpn_ext = os.path.join(BASE_DIR, "extensions", "browsec_vpn")
-        injector_ext = os.path.join(BASE_DIR, "extensions", "google_pro_6_12_24")
+        vpn_ext = self._resolve_ext_dir("browsec_vpn")
+        injector_ext = self._resolve_ext_dir("google_pro_6_12_24")
         if not os.path.exists(injector_ext):
-            injector_ext = os.path.join(BASE_DIR, "extensions", "g1_24_extension")
+            injector_ext = self._resolve_ext_dir("g1_24_extension")
             
         ext_list = [vpn_ext, injector_ext]
         ext_str = ",".join([e for e in ext_list if os.path.exists(e)])
@@ -183,22 +230,63 @@ class StackingEngine:
                 self.emit("WARN", f"Direct launch failed ({e}), falling back to 'open' command...")
                 subprocess.Popen(["open", "-a", browser_bin, "--args", f"--remote-debugging-port={self.port}", f"--user-data-dir={self.profile_dir}", f"--load-extension={ext_str}", f"--disable-extensions-except={ext_str}", start_url])
             time.sleep(2)
+            StackingEngine._active_cdp_account = self.account_id
             self.emit("INFO", f"{browser_name} window launched on macOS.")
         elif sys.platform == "win32":
-            # In batch files, % must be escaped as %% so cmd.exe doesn't expand %3A into A, %2F into F
-            safe_url = start_url.replace("%", "%%")
-            bat_path = os.path.join(BASE_DIR, "temp_interactive_edge.bat")
-            with open(bat_path, "w", encoding="utf-8") as f:
-                f.write(f"""@echo off
+            in_interactive_session = True
+            try:
+                import ctypes
+                sess_id = ctypes.c_ulong(0)
+                if ctypes.windll.kernel32.ProcessIdToSessionId(os.getpid(), ctypes.byref(sess_id)):
+                    in_interactive_session = (sess_id.value != 0)
+            except Exception:
+                in_interactive_session = True
+
+            self.emit("INFO", f"Opening interactive {browser_name} window on your desktop...")
+            launched_direct = False
+            if in_interactive_session:
+                try:
+                    cmd = [
+                        browser_bin,
+                        f"--remote-debugging-port={self.port}",
+                        f"--user-data-dir={self.profile_dir}",
+                        "--start-maximized",
+                        "--no-first-run",
+                        "--no-default-browser-check",
+                        "--disable-popup-blocking",
+                        f"--load-extension={ext_str}",
+                        f"--disable-extensions-except={ext_str}",
+                        start_url
+                    ]
+                    self.browser_proc = subprocess.Popen(
+                        cmd,
+                        stdout=subprocess.DEVNULL,
+                        stderr=subprocess.DEVNULL,
+                        creationflags=getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0)
+                    )
+                    for _ in range(8):
+                        time.sleep(0.4)
+                        if self._is_cdp_ready():
+                            launched_direct = True
+                            break
+                except Exception:
+                    launched_direct = False
+
+            if not launched_direct:
+                safe_url = start_url.replace("%", "%%")
+                bat_path = os.path.join(BASE_DIR, "temp_interactive_edge.bat")
+                with open(bat_path, "w", encoding="utf-8") as f:
+                    f.write(f"""@echo off
 start "" "{browser_bin}" --remote-debugging-port={self.port} --user-data-dir="{self.profile_dir}" --start-maximized --no-first-run --no-default-browser-check --disable-popup-blocking --load-extension="{ext_str}" --disable-extensions-except="{ext_str}" "{safe_url}"
 exit
 """)
-            task_name = "GoogleAI_InteractiveEdge"
-            self.emit("INFO", f"Opening interactive {browser_name} window on your desktop (Session 1)...")
-            subprocess.run(f'schtasks.exe /create /tn "{task_name}" /tr "explorer.exe \"{bat_path}\"" /sc ONCE /st 23:59 /it /f', shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-            subprocess.run(f'schtasks.exe /run /tn "{task_name}"', shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-            time.sleep(2)
-            subprocess.run(f'schtasks.exe /delete /tn "{task_name}" /f', shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                task_name = "GoogleAI_InteractiveEdge"
+                subprocess.run(f'schtasks.exe /create /tn "{task_name}" /tr "explorer.exe \"{bat_path}\"" /sc ONCE /st 23:59 /it /f', shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                subprocess.run(f'schtasks.exe /run /tn "{task_name}"', shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                time.sleep(2)
+                subprocess.run(f'schtasks.exe /delete /tn "{task_name}" /f', shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+            StackingEngine._active_cdp_account = self.account_id
             self.emit("INFO", f"{browser_name} window launched.")
         else:
             # Linux
@@ -216,6 +304,7 @@ exit
             self.emit("INFO", f"Opening interactive {browser_name} on Linux desktop...")
             subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
             time.sleep(2)
+            StackingEngine._active_cdp_account = self.account_id
             self.emit("INFO", f"{browser_name} window launched.")
 
     async def show_guidance_popup(self, page, badge: str, title: str, steps: list):
@@ -660,17 +749,76 @@ exit
             self.emit("WARN", f"Lưu ý khi chuyển vùng: {str(e)}")
             return False
 
+    def _create_automator(self):
+        return automation_engine.GoogleUltraAutomator(
+            account=self.account,
+            card=self.card,
+            target_region="US",
+            target_plan="pro_2year_zero",
+            auto_cancel=True,
+            port=self.port,
+            on_log=lambda m: self.emit("ENGINE", m),
+            use_vpn=True
+        )
+
+    async def layer_1_initial_12m(self, page) -> bool:
+        self.emit("STAGE", "Executing Layer 1: 12-Month Base ($0.00)...")
+        await page.context.add_init_script("window.__INIT_TEST = null;\n" + automation_engine.HOOK_JS)
+        automator = self._create_automator()
+        await self.check_and_handle_vpn(page)
+        ok = await automator.step2_layer1_12m(page)
+        if ok:
+            self.emit("SUCCESS", "✅ Hoàn tất kích hoạt Tầng 1 (12 Tháng - $0.00)!")
+        return ok
+
+    async def layer_2_oem_samsung(self, page) -> bool:
+        self.emit("STAGE", "Kích hoạt Tầng 2: Cộng dồn ưu đãi OEM Samsung (+6 Tháng - $0.00)...")
+        await page.context.add_init_script("window.__INIT_TEST = null;\n" + automation_engine.HOOK_JS)
+        automator = self._create_automator()
+        await self.check_and_handle_vpn(page)
+        sub_id = await automator.get_current_sub_id(page)
+        cfg_l2 = {
+            "name": "Step3_Layer2_6MSS_YTFree_ZeroCost",
+            "full_items": [
+                [[automation_engine.PREFIX + "g1.2tb.ai.subs_variant", 21], None, None, None, 1, [automation_engine.TOK_PRO5TB_6M_SS]],
+                [[automation_engine.PREFIX + "g1.youtube_premium_individual_add_on", 21], None, None, None, 1, [automation_engine.YT_FREE_TOK]],
+            ],
+            "ear8": [None, 5, None, None, None, [sub_id]] if sub_id else None,
+        }
+        ok = await automator.open_and_click_subscribe(page, cfg_l2, "step3_layer2_6mss")
+        if ok:
+            self.emit("SUCCESS", "✅ Hoàn tất kích hoạt Tầng 2 (+6 Tháng Samsung - $0.00)!")
+        return ok
+
+    async def layer_3_upgrade_5tb(self, page) -> bool:
+        self.emit("STAGE", "Kích hoạt Tầng 3: Nâng cấp gói Pixel 5 TB (+6 Tháng - $0.00)...")
+        await page.context.add_init_script("window.__INIT_TEST = null;\n" + automation_engine.HOOK_JS)
+        automator = self._create_automator()
+        await self.check_and_handle_vpn(page)
+        sub_id_3 = await automator.get_current_sub_id(page)
+        cfg_l3 = {
+            "name": "Step4_Layer3_6M_Pixel_ZeroCost",
+            "full_items": [
+                [[automation_engine.PREFIX + "g1.2tb.ai.subs_variant", 21], None, None, None, 1, [automation_engine.TOK_PRO5TB_6M]],
+                [[automation_engine.PREFIX + "g1.youtube_premium_individual_add_on", 21], None, None, None, 1, [automation_engine.YT_FREE_TOK]],
+            ],
+            "ear8": [None, 5, None, None, None, [sub_id_3]] if sub_id_3 else None,
+        }
+        ok = await automator.open_and_click_subscribe(page, cfg_l3, "step4_layer3_6m")
+        if ok:
+            self.emit("SUCCESS", "✅ Hoàn tất kích hoạt Tầng 3 (+6 Tháng Pixel 5 TB - $0.00)!")
+        return ok
+
     async def run_full_stacking_flow(self, auto_switch_vn: bool = True, auto_remove_cards: bool = True):
         if not _verify_author_seal():
             self.emit("ERROR", "Integrity seal validation failed: core author component missing.")
             return
         """Executes the full zero-cost 24-month stacking sequence with all halts, auto-resumes, and VN region switch."""
         self.stop_requested = False
-        clean_port(self.port)
         
-        # 1. Launch interactive Edge
-        self.launch_visible_edge()
-        await asyncio.sleep(4.0)
+        # 1. Launch interactive Edge (or reuse if already opened for this account via Step 1)
+        self.launch_visible_edge(reuse_if_open=True)
+        await asyncio.sleep(2.5)
 
         async with async_playwright() as p:
             browser = None
