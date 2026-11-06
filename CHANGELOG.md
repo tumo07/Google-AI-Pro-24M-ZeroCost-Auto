@@ -1,0 +1,37 @@
+# 📝 Nhật Ký Thay Đổi (Changelog)
+
+Toàn bộ các thay đổi, tính năng mới và cải tiến của dự án **Google AI Pro 24M Zero-Cost Auto** được ghi nhận chi tiết tại đây theo chuẩn [Keep a Changelog](https://keepachangelog.com/).
+
+---
+
+## [v1.1.0] - 2026-11-06
+
+### 🌟 Tính Năng Mới (Added)
+- **💳 Quy Trình Tự Động Gỡ Thẻ Toàn Diện (Automated Card Unlinking Workflow):**
+  - Tích hợp phương thức `unlink_all_cards()` trong `engine_stacker.py`, `gui_app.py` và giao diện tiện ích `popup.html`.
+  - Tự động hóa việc điều hướng đến Google Wallet (`wallet.google.com`) và Google Payments Center để gỡ bỏ triệt để thẻ ngân hàng (`Visa-2217`, `Visa-7551`...) sau khi gói 24 tháng đã được chốt mốc năm 2028.
+  - Đảm bảo **100% Zero-Billing Risk** — không còn thẻ lưu trên hệ thống, không có bất kỳ rủi ro phát sinh phí định kỳ.
+- **🌐 Hỗ Trợ Đa Trình Duyệt & Chrome Fallback (Multi-Browser Support):**
+  - Tự động nhận diện trình duyệt có sẵn trên Windows theo thứ tự ưu tiên: **Microsoft Edge ➔ Google Chrome ➔ Brave**.
+  - Bổ sung cờ bypass `--disable-extensions-except` và cơ chế nạp CDP init script in-page để tiện ích mở rộng hoạt động ổn định trên cả Chrome và Edge.
+- **💬 Hộp Thoại Hướng Dẫn Trực Quan Trong Trình Duyệt (In-Browser Guidance Modals):**
+  - Tích hợp hàm `show_guidance_popup()` hiển thị thông báo hướng dẫn từng bước trực tiếp trên tab trình duyệt của người dùng, giúp nắm rõ các bước cần làm (như xác nhận 2FA trên điện thoại, kiểm tra giá 0 đồng).
+- **🔒 Mã Hóa Thủy Vân Chống Trộm Bằng AI (AI-Resistant Steganographic Watermark):**
+  - Nhúng thủy vân vô hình Zero-Width Unicode (`U+200B`, `U+200C`, `U+200D`, `U+FEFF`) và con dấu bất biến cryptographic invariant seal (`0x2e1ff517`) trên 6 file lõi của dự án.
+  - Đi kèm công cụ kiểm tra bản quyền tác giả: `tools/reveal_watermark.py` (chứng minh quyền tác giả Trịnh Đăng Khoa / `@tumo07` ngay cả khi code bị AI viết lại).
+
+### 🛠️ Cải Tiến & Sửa Lỗi (Improved & Fixed)
+- Cập nhật giao diện Desktop Fluent GUI v1.1.0 với hiển thị trạng thái từng bước rõ ràng hơn.
+- Cập nhật tài liệu hướng dẫn [`HUONG_DAN_CHI_TIET.md`](HUONG_DAN_CHI_TIET.md) và [`README.md`](README.md) phản ánh quy trình gỡ thẻ và giải pháp Chrome.
+- Cập nhật bảng kiểm tra mã băm SHA-256 (`CHECKSUMS.sha256`) và chữ ký số Ed25519 (`CHECKSUMS.sha256.sig`).
+
+---
+
+## [v1.0.0] - 2026-11-05
+
+### 🚀 Phát Hành Đầu Tiên (Initial Open-Source Release)
+- **Tự động hóa cộng dồn 24 tháng Google AI Pro (5 TB):** Tầng 1 (12 tháng), Tầng 2 (6 tháng), Tầng 3 (6 tháng).
+- **Tuyệt đối 0 đồng (Zero-Billing Price Guard):** Giám sát giá qua `play_guard.js`, chỉ tiếp tục khi giá là US$0.00.
+- **Bản địa hóa 100% Tiếng Việt:** Toàn bộ extension `extensions/google_pro_6_12_24` được dịch và loại bỏ hoàn toàn tiếng Trung.
+- **Bảo vệ chữ ký số Ed25519:** Đi kèm bộ công cụ ký số `tools/sign_release.py` và thẩm định `tools/verify_release.py`.
+- **Giấy phép MIT:** Phát hành mã nguồn mở minh bạch dưới giấy phép MIT License.

@@ -49,7 +49,7 @@ class Windows11StackerApp(ctk.CTk):
             import sys; sys.exit(1)
         super().__init__()
 
-        self.title("Google AI Pro 24-Month Automator · Windows 11 Edition")
+        self.title("Google AI Pro 24-Month Automator · Windows 11 Edition v1.1.0")
         self.geometry("980x740")
         self.minsize(880, 640)
 
@@ -83,7 +83,7 @@ class Windows11StackerApp(ctk.CTk):
         # Title + Subtitle
         self.title_label = ctk.CTkLabel(
             self.header_frame,
-            text="Google AI Pro (5 TB) 24-Month Automator",
+            text="Google AI Pro (5 TB) 24-Month Automator v1.1.0",
             font=ctk.CTkFont(family="Segoe UI Variable Display", size=18, weight="bold"),
             text_color="#ffffff"
         )
