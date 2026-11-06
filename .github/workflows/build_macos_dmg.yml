@@ -37,18 +37,17 @@ jobs:
           PY_UNIV="/Library/Frameworks/Python.framework/Versions/3.11/bin/python3"
           arch -x86_64 "$PY_UNIV" -m venv /tmp/venv_x86_64
           arch -x86_64 /tmp/venv_x86_64/bin/python -m pip install --upgrade pip
-          arch -x86_64 /tmp/venv_x86_64/bin/pip install --only-binary=:all: -r requirements.txt pyinstaller
+          arch -x86_64 /tmp/venv_x86_64/bin/pip install --only-binary=:all: -r requirements.txt pillow pyinstaller
 
           arch -x86_64 /tmp/venv_x86_64/bin/pyinstaller --noconfirm --noconsole --onedir --windowed \
             --distpath dist_x86_64 \
             --workpath build_x86_64 \
-            --specpath spec_x86_64 \
             --name "Google AI Pro Automator" \
             --osx-bundle-identifier "vn.io.tumo07.googleaiproautomator" \
-            --add-data "extensions:extensions" \
-            --add-data "config.example.json:." \
-            --add-data "README.md:." \
-            --add-data "LICENSE:." \
+            --add-data "$PWD/extensions:extensions" \
+            --add-data "$PWD/config.example.json:." \
+            --add-data "$PWD/README.md:." \
+            --add-data "$PWD/LICENSE:." \
             --collect-all customtkinter \
             --collect-all cryptography \
             --collect-all playwright \
@@ -65,18 +64,17 @@ jobs:
           PY_UNIV="/Library/Frameworks/Python.framework/Versions/3.11/bin/python3"
           arch -arm64 "$PY_UNIV" -m venv /tmp/venv_arm64
           arch -arm64 /tmp/venv_arm64/bin/python -m pip install --upgrade pip
-          arch -arm64 /tmp/venv_arm64/bin/pip install --only-binary=:all: -r requirements.txt pyinstaller
+          arch -arm64 /tmp/venv_arm64/bin/pip install --only-binary=:all: -r requirements.txt pillow pyinstaller
 
           arch -arm64 /tmp/venv_arm64/bin/pyinstaller --noconfirm --noconsole --onedir --windowed \
             --distpath dist_arm64 \
             --workpath build_arm64 \
-            --specpath spec_arm64 \
             --name "Google AI Pro Automator" \
             --osx-bundle-identifier "vn.io.tumo07.googleaiproautomator" \
-            --add-data "extensions:extensions" \
-            --add-data "config.example.json:." \
-            --add-data "README.md:." \
-            --add-data "LICENSE:." \
+            --add-data "$PWD/extensions:extensions" \
+            --add-data "$PWD/config.example.json:." \
+            --add-data "$PWD/README.md:." \
+            --add-data "$PWD/LICENSE:." \
             --collect-all customtkinter \
             --collect-all cryptography \
             --collect-all playwright \
