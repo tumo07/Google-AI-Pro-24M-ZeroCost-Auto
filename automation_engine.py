@@ -271,10 +271,20 @@ PREFIX           = "subs:com.google.android.apps.subscriptions.red:"
 HOOK_JS = """
 (() => {
   if (!location.hostname.includes('one.google.com')) return;
-  if (window.__HOOK_INSTALLED) return;
+  window.__setDirectTest = (t) => {
+    window.__INIT_TEST = t;
+    window.__ACTIVE_GAPT_CFG = t;
+    if (typeof window.__applyHookCfg === 'function') window.__applyHookCfg(t);
+  };
+  if (window.__HOOK_INSTALLED) {
+    if (window.__INIT_TEST && typeof window.__applyHookCfg === 'function') {
+      window.__applyHookCfg(window.__INIT_TEST);
+    }
+    return;
+  }
   window.__HOOK_INSTALLED = true;
-  let currentTest = window.__INIT_TEST || null;
-  window.__setDirectTest = (t) => { currentTest = t; };
+  let currentTest = window.__ACTIVE_GAPT_CFG || window.__INIT_TEST || null;
+  window.__applyHookCfg = (t) => { currentTest = t; };
 
   function patchTargetNode(node) {
     if (!Array.isArray(node) || !Array.isArray(currentTest?.full_items)) return false;
@@ -1425,11 +1435,15 @@ class GoogleUltraAutomator:
         target_fr = None
         clean_txt = ""
 
-        # Primary trigger: one.google.com/plans?hl=vi clicking the LAST action button (proven 100% reliable across L1, L2, L3)
-        for attempt_url in ("https://one.google.com/plans?hl=vi",) * 5:
+        # Primary trigger: one.google.com/plans?hl=vi&gl=US clicking the LAST action button (proven 100% reliable across L1, L2, L3)
+        for attempt_url in ("https://one.google.com/plans?hl=vi&gl=US",) * 5:
             if target_fr:
                 break
             self.log(f"[{step_tag}] Đang mở trang gói Google One kích hoạt thanh toán 0đ: {attempt_url}")
+            try:
+                await page.context.add_init_script(f"window.__INIT_TEST = {json.dumps(cfg)};\n" + HOOK_JS)
+            except Exception:
+                pass
             await self.safe_goto(page, attempt_url, timeout=40000)
             await asyncio.sleep(3.5)
             if "accounts.google.com" in page.url or "gds.google.com" in page.url:

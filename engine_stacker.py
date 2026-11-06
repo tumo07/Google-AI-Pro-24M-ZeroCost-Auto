@@ -232,8 +232,16 @@ class StackingEngine:
         into every document and iframe via Chrome DevTools Protocol (Page.addScriptToEvaluateOnNewDocument).
         Guarantees 100% functionality on macOS & Windows even if Chrome blocks --load-extension!
         """
+        default_l1_cfg = {
+            "name": "Step2_Layer1_12M_YTFree_ZeroCost",
+            "full_items": [
+                [[automation_engine.PREFIX + "g1.2tb.ai.subs_variant", 21], None, None, None, 1, [automation_engine.TOK_PRO5TB_12M]],
+                [[automation_engine.PREFIX + "g1.youtube_premium_individual_add_on", 21], None, None, None, 1, [automation_engine.YT_FREE_TOK]],
+            ],
+            "ear8": None,
+        }
         play_guard_js = self._get_play_guard_js()
-        combined_script = "window.__INIT_TEST = null;\n" + automation_engine.HOOK_JS + "\n" + play_guard_js
+        combined_script = f"window.__INIT_TEST = window.__INIT_TEST || {json.dumps(default_l1_cfg)};\n" + automation_engine.HOOK_JS + "\n" + play_guard_js
         await context.add_init_script(combined_script)
         for p in context.pages:
             try:
@@ -536,29 +544,75 @@ exit
         except Exception:
             pass
 
+    async def _discover_browsec_ext_id(self, context) -> str:
+        """Dynamically discovers the loaded Browsec VPN extension ID across Windows/macOS paths."""
+        if getattr(self, "_cached_browsec_id", None):
+            return self._cached_browsec_id
+        try:
+            for p in context.pages:
+                u = p.url or ""
+                if "chrome-extension://" in u and ("browsec" in u.lower() or "installed_compare" in u or "first-start" in u or "popup/popup.html" in u):
+                    cid = u.split("chrome-extension://")[1].split("/")[0]
+                    if len(cid) == 32:
+                        self._cached_browsec_id = cid
+                        return cid
+            cdp = await context.browser.new_browser_cdp_session()
+            try:
+                await cdp.send("Target.setDiscoverTargets", {"discover": True})
+                res = await cdp.send("Target.getTargets")
+                for t in res.get("targetInfos", []):
+                    url = t.get("url", "")
+                    if "chrome-extension://" in url and ("background.js" in url or "popup/popup.html" in url or "browsec" in url.lower()):
+                        cid = url.split("chrome-extension://")[1].split("/")[0]
+                        if len(cid) == 32 and cid not in ("ndcpkimcihhghdcddljkfmmjccdmcmof", "ihmafllikibpmigkcoadcmckbfhibefp", "nkeimhogjdpnpccoofpliimaahmaaome"):
+                            self._cached_browsec_id = cid
+                            return cid
+            finally:
+                try:
+                    await cdp.detach()
+                except Exception:
+                    pass
+        except Exception:
+            pass
+        return getattr(self, "_cached_browsec_id", None) or "idpcbofefmfbbabefbkldkdgjffphfgo"
+
     async def probe_browsec_vpn_status(self, context) -> bool:
         """
         Directly probes Browsec VPN extension via Chromium's chrome.proxy.settings API.
         Checks:
         1. levelOfControl == 'controlled_by_this_extension' or 'controlled_by_other_extensions'
         2. PAC script routes globalReturn to 'us' or 'usw'
-        Completely immune to UI display language (hl=vi) false positives.
+        Completely immune to UI display language (hl=vi) false positives and dynamic unpacked Extension IDs.
         """
         try:
-            ext_id = "mgganlenmpfgepiphpnpfoolikeaafee"
+            cand_ids = []
+            disc_id = await self._discover_browsec_ext_id(context)
+            if disc_id:
+                cand_ids.append(disc_id)
+            for fallback_id in ("idpcbofefmfbbabefbkldkdgjffphfgo", "mgganlenmpfgepiphpnpfoolikeaafee"):
+                if fallback_id not in cand_ids:
+                    cand_ids.append(fallback_id)
+
             pop = await context.new_page()
             try:
-                await pop.goto(f"chrome-extension://{ext_id}/popup/popup.html", timeout=4000)
-                res = await pop.evaluate("""new Promise(resolve => {
-                    if (!chrome.proxy || !chrome.proxy.settings) return resolve(false);
-                    chrome.proxy.settings.get({}, (cfg) => {
-                        const controlled = cfg && (cfg.levelOfControl === 'controlled_by_this_extension' || cfg.levelOfControl === 'controlled_by_other_extensions');
-                        const pacData = cfg?.value?.pacScript?.data || '';
-                        const isUS = pacData.includes('globalReturn="us"') || pacData.includes('globalReturn="usw"');
-                        resolve(controlled && isUS);
-                    });
-                })""")
-                return bool(res)
+                for ext_id in cand_ids:
+                    try:
+                        await pop.goto(f"chrome-extension://{ext_id}/popup/popup.html", timeout=3500)
+                        res = await pop.evaluate("""new Promise(resolve => {
+                            if (!chrome.proxy || !chrome.proxy.settings) return resolve(false);
+                            chrome.proxy.settings.get({}, (cfg) => {
+                                const controlled = cfg && (cfg.levelOfControl === 'controlled_by_this_extension' || cfg.levelOfControl === 'controlled_by_other_extensions');
+                                const pacData = cfg?.value?.pacScript?.data || '';
+                                const isUS = pacData.includes('globalReturn="us"') || pacData.includes('globalReturn="usw"');
+                                resolve(controlled && isUS);
+                            });
+                        })""")
+                        if res:
+                            self._cached_browsec_id = ext_id
+                            return True
+                    except Exception:
+                        continue
+                return False
             finally:
                 await pop.close()
         except Exception:
@@ -621,7 +675,12 @@ exit
             await asyncio.sleep(2.0)
             await self.check_for_vietnam_or_addon_block(page)
             if await self.verify_vpn_us_active(page):
-                self.emit("RESUME_VPN", "🟢 Đã xác thực tiện ích Browsec VPN kết nối Hoa Kỳ (US)! Tự động tiếp tục...")
+                self.emit("RESUME_VPN", "🟢 Đã xác thực tiện ích Browsec VPN kết nối Hoa Kỳ (US)! Đang tải lại bảng giá US$0.00 và tiếp tục...")
+                try:
+                    await page.goto("https://one.google.com/plans?hl=vi&gl=US", wait_until="domcontentloaded", timeout=25000)
+                    await asyncio.sleep(2.5)
+                except Exception:
+                    pass
                 return True
         return False
 
@@ -1049,21 +1108,16 @@ exit
             await automator.activate_vpn_to_us(browser, context, page)
             page = context.pages[0] if context.pages else await context.new_page()
 
-            # If page hit chrome error / ERR_TIMED_OUT, auto-refresh
+            # Reload Google One under the newly connected US VPN tunnel so US$ pricing loads instead of cached VN pricing
+            self.emit("INFO", "🇺🇸 Đang tải lại trang Google One qua máy chủ Hoa Kỳ (US) để kích hoạt bảng giá US$0.00...")
             for _ in range(3):
-                if "chromewebdata" in (page.url or ""):
-                    self.emit("INFO", "Phát hiện trang đang tải chậm qua proxy, đang bấm Tải lại (Refresh)...")
-                    try:
-                        rbtn = page.locator('#reload-button, button:has-text("Refresh"), button:has-text("Tải lại")')
-                        if await rbtn.count() > 0:
-                            await rbtn.first.click(force=True)
-                        else:
-                            await page.goto("https://one.google.com/plans?hl=vi", timeout=25000)
-                    except Exception:
-                        pass
-                    await asyncio.sleep(4.0)
-                else:
-                    break
+                try:
+                    await page.goto("https://one.google.com/plans?hl=vi&gl=US", wait_until="domcontentloaded", timeout=25000)
+                    await asyncio.sleep(3.0)
+                    if "chromewebdata" not in (page.url or ""):
+                        break
+                except Exception:
+                    await asyncio.sleep(2.5)
 
             # Checkpoint 3: Pre-check VPN routing to US
             await self.check_and_handle_vpn(page)
