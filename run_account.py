@@ -1,3 +1,4 @@
+import ensure_env
 import asyncio
 import json
 import os

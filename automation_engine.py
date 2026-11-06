@@ -24,6 +24,7 @@ import urllib.request
 import time
 import zipfile
 from typing import Callable, Dict, Any, Optional
+import ensure_env
 from playwright.async_api import async_playwright
 
 def _find_browser_binary(prefer_edge: bool = True):

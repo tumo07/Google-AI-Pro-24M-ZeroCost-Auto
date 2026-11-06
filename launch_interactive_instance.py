@@ -25,6 +25,7 @@ if hasattr(sys.stdout, 'reconfigure'):
     except Exception:
         pass
 
+import ensure_env
 from playwright.async_api import async_playwright
 import automation_engine
 

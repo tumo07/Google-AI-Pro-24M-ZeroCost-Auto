@@ -1,3 +1,4 @@
+import ensure_env
 """
 Custom 24-Month Stacking Flow for Google AI Pro (5 TB)
 Based on Browser Control Infrastructure and Manual Community Flow.

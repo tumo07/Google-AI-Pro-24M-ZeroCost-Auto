@@ -33,6 +33,7 @@ from typing import Optional, Dict, Any
 
 import customtkinter as ctk
 from PIL import Image
+import ensure_env
 from playwright.async_api import async_playwright
 
 # Setup base paths

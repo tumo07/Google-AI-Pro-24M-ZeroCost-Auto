@@ -30,7 +30,7 @@ print("Preparing macOS Universal bundle with POSIX 0755 permissions...")
 mac_zip_path = os.path.join(RELEASE_OUT, "Google-AI-Pro-Automator-v1.2.0-macOS-Universal.zip")
 
 mac_files = [
-    "gui_app.py", "engine_stacker.py", "automation_engine.py", "launch_interactive_instance.py",
+    "ensure_env.py", "gui_app.py", "engine_stacker.py", "automation_engine.py", "launch_interactive_instance.py",
     "Google_AI_Pro_Automator.command", "setup_macos.sh", "run_gui.sh", "run_stacker.sh",
     "custom_stacking_flow.py", "run_account.py", "run_layer2_layer3_step5.py", "stack_layers_now.py",
     "config.example.json", "config.json", "requirements.txt",
@@ -88,7 +88,7 @@ print("Preparing Windows Portable Python bundle with automated bootstrap...")
 win_zip_path = os.path.join(RELEASE_OUT, "Google-AI-Pro-Automator-v1.2.0-Windows-Portable.zip")
 
 win_files = [
-    "gui_app.py", "engine_stacker.py", "automation_engine.py", "launch_interactive_instance.py",
+    "ensure_env.py", "gui_app.py", "engine_stacker.py", "automation_engine.py", "launch_interactive_instance.py",
     "start_gui.bat", "Google_AI_Pro_Tool.bat", "3_Chay_Custom_Flow.bat", "4_Dang_Nhap_Account_Moi.bat",
     "5_Chay_Nang_Cap_24T.bat", "6_Tu_Dong_A_Den_Z_Moi_Acc.bat", "launch_visible_automation.bat",
     "custom_stacking_flow.py", "run_account.py", "run_layer2_layer3_step5.py", "stack_layers_now.py",

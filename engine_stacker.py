@@ -31,6 +31,7 @@ import platform
 import shutil
 import re
 from typing import Optional, Callable, Dict, Any
+import ensure_env
 from playwright.async_api import async_playwright
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))

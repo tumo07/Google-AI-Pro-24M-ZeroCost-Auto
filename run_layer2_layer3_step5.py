@@ -7,6 +7,7 @@ import time
 
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
 
+import ensure_env
 from playwright.async_api import async_playwright
 import automation_engine
 from engine_stacker import StackingEngine
