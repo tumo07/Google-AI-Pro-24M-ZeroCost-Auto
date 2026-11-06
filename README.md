@@ -1,13 +1,13 @@
 # 🚀 Google AI Pro 24-Month Zero-Cost Stacking Automator
 
-[![Release: v1.2.0](https://img.shields.io/badge/Release-v1.2.0-blue.svg)](https://github.com/tumo07/Google-AI-Pro-24M-ZeroCost-Auto/releases/tag/v1.2.0)
+[![Release: v1.3.0](https://img.shields.io/badge/Release-v1.3.0-blue.svg)](https://github.com/tumo07/Google-AI-Pro-24M-ZeroCost-Auto/releases/tag/v1.3.0)
 [![macOS](https://img.shields.io/badge/macOS-Apple%20Silicon%20%7C%20Intel-black.svg?logo=apple)](setup_macos.sh)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![Python: 3.10+](https://img.shields.io/badge/Python-3.10%2B-brightgreen.svg)](https://www.python.org/)
 [![Playwright](https://img.shields.io/badge/Playwright-CDP%20Automation-orange.svg)](https://playwright.dev/)
 [![Verified Author](https://img.shields.io/badge/Author-tumo07-purple.svg)](https://github.com/tumo07)
 [![Cryptographically Signed](https://img.shields.io/badge/Release-Ed25519%20Signed-success.svg)](tools/verify_release.py)
-[![Changelog](https://img.shields.io/badge/Changelog-v1.2.0-informational.svg)](CHANGELOG.md)
+[![Changelog](https://img.shields.io/badge/Changelog-v1.3.0-informational.svg)](CHANGELOG.md)
 
 **Google AI Pro 24M Zero-Cost Auto** là bộ công cụ mã nguồn mở tự động hóa quy trình nghiên cứu cấu trúc gói đăng ký Google One / Google AI Pro (5 TB) và YouTube Premium 24 tháng với cơ chế bảo vệ nghiêm ngặt **US$0.00 (Zero-Billing Price Guard)** và tự động hủy gia hạn & gỡ sạch thẻ ngân hàng sau khi hoàn tất.
 
@@ -19,16 +19,16 @@ Người dùng có thể tải ngay các gói đóng gói sẵn từ [Trang GitH
 
 | Bản Phát Hành (Package) | Hệ Điều Hành | Chi Tiết Gói | Liên Kết Tải Nhanh (Direct Download) |
 | :--- | :--- | :--- | :--- |
-| **🪟 Windows Standalone (.exe)** | Windows 10/11 (64-bit) | Bản EXE độc lập đóng gói sẵn, **không cần cài Python**. Khắc phục triệt để lỗi phân quyền PowerShell / Windows Terminal (`0x80070005`). | [⬇️ **Tải GoogleAIProAutomator-v1.2.0-Windows-x64-Standalone.zip** (~81 MB)](https://github.com/tumo07/Google-AI-Pro-24M-ZeroCost-Auto/releases/download/v1.2.0/GoogleAIProAutomator-v1.2.0-Windows-x64-Standalone.zip) |
-| **🍎 macOS Standalone DMG (Apple Silicon)** | macOS 12+ (M1 / M2 / M3 / M4 arm64) | Bộ cài đặt đĩa ảnh `.dmg` độc lập hoàn chỉnh cho Apple Silicon. Kéo thả vào Applications chạy ngay, **không cần cài Python hay cấu hình**. | [⬇️ **Tải GoogleAIProAutomator-v1.2.0-macOS-AppleSilicon.dmg** (~185 MB)](https://github.com/tumo07/Google-AI-Pro-24M-ZeroCost-Auto/releases/download/v1.2.0/GoogleAIProAutomator-v1.2.0-macOS-AppleSilicon.dmg) |
-| **🍎 macOS Universal DMG (Mọi dòng Mac)** | macOS 12+ (Apple Silicon & Intel) | Bộ cài đặt đĩa ảnh `.dmg` phổ quát chứa `Google AI Pro Automator.app` tương thích 100% với cả chip M-series và Intel. | [⬇️ **Tải GoogleAIProAutomator-v1.2.0-macOS-Universal.dmg** (~18 MB)](https://github.com/tumo07/Google-AI-Pro-24M-ZeroCost-Auto/releases/download/v1.2.0/GoogleAIProAutomator-v1.2.0-macOS-Universal.dmg) |
-| **🍎 macOS Standalone DMG (Intel)** | macOS 12+ (Intel x86_64) | Bộ cài đặt đĩa ảnh `.dmg` tối ưu cho máy Mac sử dụng chip Intel. | [⬇️ **Tải GoogleAIProAutomator-v1.2.0-macOS-Intel.dmg** (~18 MB)](https://github.com/tumo07/Google-AI-Pro-24M-ZeroCost-Auto/releases/download/v1.2.0/GoogleAIProAutomator-v1.2.0-macOS-Intel.dmg) |
-| **🍎 macOS Universal Bundle (.zip)** | macOS (Apple Silicon & Intel) | Gói nén chứa file `Google AI Pro Automator.app` + `Google_AI_Pro_Automator.command` đã cấp sẵn quyền POSIX 0755. | [⬇️ **Tải Google-AI-Pro-Automator-v1.2.0-macOS-Universal.zip** (~15 MB)](https://github.com/tumo07/Google-AI-Pro-24M-ZeroCost-Auto/releases/download/v1.2.0/Google-AI-Pro-Automator-v1.2.0-macOS-Universal.zip) |
-| **🪟 Windows Portable (Python)** | Windows 10/11 (64-bit) | Bản Portable gọn nhẹ kèm bộ tự động nạp thư viện `ensure_env.py` (yêu cầu máy có Python 3.10+). | [⬇️ **Tải Google-AI-Pro-Automator-v1.2.0-Windows-Portable.zip** (~15 MB)](https://github.com/tumo07/Google-AI-Pro-24M-ZeroCost-Auto/releases/download/v1.2.0/Google-AI-Pro-Automator-v1.2.0-Windows-Portable.zip) |
+| **🪟 Windows Standalone (.exe)** | Windows 10/11 (64-bit) | Bản EXE độc lập đóng gói sẵn, **không cần cài Python**. Khắc phục triệt để lỗi phân quyền PowerShell / Windows Terminal (`0x80070005`). | [⬇️ **Tải GoogleAIProAutomator-v1.3.0-Windows-x64-Standalone.zip** (~81 MB)](https://github.com/tumo07/Google-AI-Pro-24M-ZeroCost-Auto/releases/download/v1.3.0/GoogleAIProAutomator-v1.3.0-Windows-x64-Standalone.zip) |
+| **🍎 macOS Standalone DMG (Apple Silicon)** | macOS 12+ (M1 / M2 / M3 / M4 arm64) | Bộ cài đặt đĩa ảnh `.dmg` độc lập hoàn chỉnh cho Apple Silicon. Kéo thả vào Applications chạy ngay, **không cần cài Python hay cấu hình**. | [⬇️ **Tải GoogleAIProAutomator-v1.3.0-macOS-AppleSilicon.dmg** (~185 MB)](https://github.com/tumo07/Google-AI-Pro-24M-ZeroCost-Auto/releases/download/v1.3.0/GoogleAIProAutomator-v1.3.0-macOS-AppleSilicon.dmg) |
+| **🍎 macOS Universal DMG (Mọi dòng Mac)** | macOS 12+ (Apple Silicon & Intel) | Bộ cài đặt đĩa ảnh `.dmg` phổ quát chứa `Google AI Pro Automator.app` tương thích 100% với cả chip M-series và Intel. | [⬇️ **Tải GoogleAIProAutomator-v1.3.0-macOS-Universal.dmg** (~18 MB)](https://github.com/tumo07/Google-AI-Pro-24M-ZeroCost-Auto/releases/download/v1.3.0/GoogleAIProAutomator-v1.3.0-macOS-Universal.dmg) |
+| **🍎 macOS Standalone DMG (Intel)** | macOS 12+ (Intel x86_64) | Bộ cài đặt đĩa ảnh `.dmg` tối ưu cho máy Mac sử dụng chip Intel. | [⬇️ **Tải GoogleAIProAutomator-v1.3.0-macOS-Intel.dmg** (~18 MB)](https://github.com/tumo07/Google-AI-Pro-24M-ZeroCost-Auto/releases/download/v1.3.0/GoogleAIProAutomator-v1.3.0-macOS-Intel.dmg) |
+| **🍎 macOS Universal Bundle (.zip)** | macOS (Apple Silicon & Intel) | Gói nén chứa file `Google AI Pro Automator.app` + `Google_AI_Pro_Automator.command` đã cấp sẵn quyền POSIX 0755. | [⬇️ **Tải Google-AI-Pro-Automator-v1.3.0-macOS-Universal.zip** (~15 MB)](https://github.com/tumo07/Google-AI-Pro-24M-ZeroCost-Auto/releases/download/v1.3.0/Google-AI-Pro-Automator-v1.3.0-macOS-Universal.zip) |
+| **🪟 Windows Portable (Python)** | Windows 10/11 (64-bit) | Bản Portable gọn nhẹ kèm bộ tự động nạp thư viện `ensure_env.py` (yêu cầu máy có Python 3.10+). | [⬇️ **Tải Google-AI-Pro-Automator-v1.3.0-Windows-Portable.zip** (~15 MB)](https://github.com/tumo07/Google-AI-Pro-24M-ZeroCost-Auto/releases/download/v1.3.0/Google-AI-Pro-Automator-v1.3.0-Windows-Portable.zip) |
 
 > 💡 **Khuyến nghị cho người mới:**
-> - Trên **Windows**: Tải bản **[Windows Standalone (.exe)](https://github.com/tumo07/Google-AI-Pro-24M-ZeroCost-Auto/releases/download/v1.2.0/GoogleAIProAutomator-v1.2.0-Windows-x64-Standalone.zip)** để nhấp đúp chạy ngay.
-> - Trên **macOS**: Tải bản **[macOS Standalone DMG (Apple Silicon)](https://github.com/tumo07/Google-AI-Pro-24M-ZeroCost-Auto/releases/download/v1.2.0/GoogleAIProAutomator-v1.2.0-macOS-AppleSilicon.dmg)** hoặc bản Universal. Chỉ cần mở đĩa ảo và kéo vào `Applications`.  
+> - Trên **Windows**: Tải bản **[Windows Standalone (.exe)](https://github.com/tumo07/Google-AI-Pro-24M-ZeroCost-Auto/releases/download/v1.3.0/GoogleAIProAutomator-v1.3.0-Windows-x64-Standalone.zip)** để nhấp đúp chạy ngay.
+> - Trên **macOS**: Tải bản **[macOS Standalone DMG (Apple Silicon)](https://github.com/tumo07/Google-AI-Pro-24M-ZeroCost-Auto/releases/download/v1.3.0/GoogleAIProAutomator-v1.3.0-macOS-AppleSilicon.dmg)** hoặc bản Universal. Chỉ cần mở đĩa ảo và kéo vào `Applications`.  
 > 📌 **Truy cập Release Page:** [Xem danh sách toàn bộ các phiên bản phát hành và Changelog](https://github.com/tumo07/Google-AI-Pro-24M-ZeroCost-Auto/releases)
 
 ---

@@ -27,7 +27,7 @@ def add_file_with_unix_perms(zf, file_path, arc_path, is_exec=False):
 
 # 1. Package macOS Universal Bundle
 print("Preparing macOS Universal bundle with POSIX 0755 permissions...")
-mac_zip_path = os.path.join(RELEASE_OUT, "Google-AI-Pro-Automator-v1.2.0-macOS-Universal.zip")
+mac_zip_path = os.path.join(RELEASE_OUT, "Google-AI-Pro-Automator-v1.3.0-macOS-Universal.zip")
 
 mac_files = [
     "ensure_env.py", "gui_app.py", "engine_stacker.py", "automation_engine.py", "launch_interactive_instance.py",
@@ -95,7 +95,7 @@ print(f"[OK] Created: {mac_zip_path} ({os.path.getsize(mac_zip_path) / 1024:.2f}
 
 # 2. Package Windows Portable Python Bundle
 print("Preparing Windows Portable Python bundle with automated bootstrap...")
-win_zip_path = os.path.join(RELEASE_OUT, "Google-AI-Pro-Automator-v1.2.0-Windows-Portable.zip")
+win_zip_path = os.path.join(RELEASE_OUT, "Google-AI-Pro-Automator-v1.3.0-Windows-Portable.zip")
 
 win_files = [
     "ensure_env.py", "gui_app.py", "engine_stacker.py", "automation_engine.py", "launch_interactive_instance.py",

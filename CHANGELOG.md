@@ -4,6 +4,28 @@ Toàn bộ các thay đổi, tính năng mới và cải tiến của dự án *
 
 ---
 
+## [v1.3.0] - 2026-11-06
+
+### 🧭 Tái Cấu Trúc Toàn Diện Trải Nghiệm Người Dùng (Beginner-Friendly UX Overhaul)
+- **🚀 Giao Diện Hướng Dẫn Wizard 4 Bước (Guided Stepper Roadmap):**
+  - Trực quan hóa quy trình bằng thanh tiến trình trực quan: `[1. Đăng Nhập] ➔ [2. Nâng Cấp 24T] ➔ [3. Khóa 2028 & Gỡ Thẻ] ➔ [4. Chia Sẻ Gia Đình]`.
+  - Bổ sung nút hành động 1-Click nổi bật: **`🚀 BẮT ĐẦU TỰ ĐỘNG TOÀN BỘ TỪ A ĐẾN Z`** dành cho người mới không cần cấu hình phức tạp.
+  - Tách bạch rõ ràng 3 phân hệ: `🧭 Hướng Dẫn Từng Bước (Wizard)`, `⚙️ Nâng Cao (Advanced Multi-Account)`, và `💡 Hỏi Đáp & Trợ Giúp (FAQ)`.
+- **🎬 Bộ Clip Hướng Dẫn Trực Quan (Animated Visual Guide Clips):**
+  - Tích hợp 3 video hướng dẫn dạng ảnh động tối ưu hóa siêu nhẹ (`< 200 KB`) trực tiếp vào tài liệu và ứng dụng:
+    - `quick_start_flow.gif`: Trình diễn toàn bộ dòng chảy tự động hóa từ A đến Z.
+    - `step1_login_checkpoint.gif`: Hướng dẫn đăng nhập và vượt mã xác nhận 2FA trên điện thoại.
+    - `step2_zero_dollar_guard.gif`: Minh họa lá chắn an toàn $0.00, cộng dồn 3 gói và hủy gia hạn.
+- **📦 Tự Động Kiểm Tra & Nạp Thư Viện (Automated Dependency Bootstrapper):**
+  - Khởi chạy script tự động dò tìm Python chuẩn trên máy, phát hiện thiếu thư viện và tự động gọi `pip install -r requirements.txt`.
+  - Tự động tải browser driver `playwright install chromium` mà không đòi hỏi người dùng phải gõ lệnh terminal thủ công.
+- **🛡️ Khắc Phục Lỗi Phân Quyền & Cú Pháp Batch Shell:**
+  - Khắc phục lỗi `0x80070005` (Access Denied PowerShell) bằng kiến trúc Single-Instance Socket Lock thuần Python.
+  - Sửa lỗi `'Tu' is not recognized as an internal or external command` trong các tệp `.bat` bằng cách escape ký tự `&` trong lệnh `title`.
+  - Khắc phục lỗi thiếu quyền thực thi trên macOS (`Google_AI_Pro_Automator.command`) bằng việc đóng gói sẵn thuộc tính POSIX `0755` (`rwxr-xr-x`) và cung cấp bộ cài ảnh đĩa `.dmg`.
+
+---
+
 ## [v1.2.0] - 2026-11-06
 
 ### 🍎 Hỗ Trợ Toàn Diện Cho macOS (Apple Silicon M1-M4 & Intel Universal)

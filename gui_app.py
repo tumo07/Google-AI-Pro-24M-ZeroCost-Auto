@@ -67,7 +67,7 @@ class UniversalStackerApp(ctk.CTk):
             import sys; sys.exit(1)
         super().__init__()
 
-        self.title(f"Google AI Pro 24-Month Automator · Universal Edition ({OS_DESC})")
+        self.title(f"Google AI Pro 24-Month Automator v1.3.0 · Universal Edition ({OS_DESC})")
         self.geometry("1100x820")
         self.minsize(960, 700)
         self.configure(fg_color="#121214")
@@ -519,7 +519,7 @@ class UniversalStackerApp(ctk.CTk):
             ("🍎 Xử lý lỗi phân quyền trên macOS?",
              "Nếu tải file ZIP và gặp thông báo 'Không có đặc quyền truy cập', hãy tải bản file .dmg chính thức kéo vào Applications, hoặc mở Terminal gõ: chmod +x *.command *.sh"),
             ("🪟 Xử lý lỗi 0x80070005 trên Windows?",
-             "Ứng dụng từ phiên bản v1.2.0 đã chuyển sang socket lock thuần Python, hoàn toàn không phụ thuộc vào PowerShell nên khắc phục 100% lỗi quyền.")
+             "Ứng dụng từ phiên bản v1.3.0 đã chuyển sang socket lock thuần Python, hoàn toàn không phụ thuộc vào PowerShell nên khắc phục 100% lỗi quyền.")
         ]
 
         for q, a in faqs:
