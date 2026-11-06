@@ -26,6 +26,8 @@ import time
 import threading
 import asyncio
 import subprocess
+import platform
+import signal
 from typing import Optional, Dict, Any
 
 import customtkinter as ctk
@@ -39,18 +41,40 @@ ARTIFACTS_DIR = r"C:\Users\khoa\.gemini\antigravity\brain\bdb8ac8f-261e-4351-826
 
 import engine_stacker
 
-# Set CustomTkinter theme to Windows 11 Fluent style
+# Detect Operating System and CPU Architecture (Apple Silicon arm64 / Intel x86_64 / Windows)
+IS_MAC = sys.platform == "darwin"
+IS_WIN = sys.platform == "win32"
+ARCH = platform.machine().lower()
+if IS_MAC:
+    OS_DESC = f"🍎 macOS ({'Apple Silicon ' + ARCH if 'arm' in ARCH or 'aarch' in ARCH else 'Intel ' + ARCH})"
+    FONT_HEADING = "SF Pro Display"
+    FONT_BODY = "SF Pro Text"
+elif IS_WIN:
+    OS_DESC = f"🪟 Windows ({ARCH})"
+    FONT_HEADING = "Segoe UI Variable Display"
+    FONT_BODY = "Segoe UI Variable Text"
+else:
+    OS_DESC = f"🐧 Linux ({ARCH})"
+    FONT_HEADING = "Ubuntu"
+    FONT_BODY = "DejaVu Sans"
+
+# Set CustomTkinter theme
 ctk.set_appearance_mode("dark")
 ctk.set_default_color_theme("blue")
 
-class Windows11StackerApp(ctk.CTk):
+class UniversalStackerApp(ctk.CTk):
+    pass
+UniversalStackerApp = UniversalStackerApp
+Windows11StackerApp = UniversalStackerApp
+
+class UniversalStackerApp(ctk.CTk):
     def __init__(self):
         if not _verify_author_seal():
             import sys; sys.exit(1)
         super().__init__()
 
-        self.title("Google AI Pro 24-Month Automator · Windows 11 Edition v1.1.0")
-        self.geometry("980x740")
+        self.title(f"Google AI Pro 24-Month Automator · Universal v1.2.0 ({OS_DESC})")
+        self.geometry("1020x750")
         self.minsize(880, 640)
 
         # Apply dark background
@@ -83,11 +107,24 @@ class Windows11StackerApp(ctk.CTk):
         # Title + Subtitle
         self.title_label = ctk.CTkLabel(
             self.header_frame,
-            text="Google AI Pro (5 TB) 24-Month Automator v1.1.0",
-            font=ctk.CTkFont(family="Segoe UI Variable Display", size=18, weight="bold"),
+            text="Google AI Pro (5 TB) 24-Month Automator v1.2.0",
+            font=ctk.CTkFont(family=FONT_HEADING, size=18, weight="bold"),
             text_color="#ffffff"
         )
         self.title_label.pack(side="left", padx=18, pady=(10, 2))
+
+        # OS Architecture Pill
+        self.os_badge = ctk.CTkLabel(
+            self.header_frame,
+            text=OS_DESC,
+            font=ctk.CTkFont(family=FONT_BODY, size=12, weight="bold"),
+            fg_color="#27272a",
+            text_color="#a1a1aa",
+            corner_radius=8,
+            padx=10,
+            pady=4
+        )
+        self.os_badge.pack(side="right", padx=(4, 16), pady=12)
 
         # Status badge pill on right
         self.vpn_badge = ctk.CTkLabel(
@@ -500,15 +537,27 @@ class Windows11StackerApp(ctk.CTk):
 
 def ensure_single_instance():
     curr_pid = os.getpid()
-    try:
-        cmd = f'powershell -Command "Get-CimInstance Win32_Process | Where-Object {{ $_.ProcessId -ne {curr_pid} -and $_.CommandLine -like \'*gui_app.py*\' }} | ForEach-Object {{ Stop-Process -Id $_.ProcessId -Force }}"'
-        subprocess.run(cmd, shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-    except Exception:
-        pass
+    if sys.platform == "win32":
+        try:
+            cmd = f'powershell -Command "Get-CimInstance Win32_Process | Where-Object {{ $_.ProcessId -ne {curr_pid} -and $_.CommandLine -like '*gui_app.py*' }} | ForEach-Object {{ Stop-Process -Id $_.ProcessId -Force }}"'
+            subprocess.run(cmd, shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        except Exception:
+            pass
+    else:
+        try:
+            out = subprocess.check_output("pgrep -f gui_app.py", shell=True, text=True)
+            for p in out.split():
+                if p.strip() and int(p.strip()) != curr_pid:
+                    try:
+                        os.kill(int(p.strip()), signal.SIGTERM)
+                    except Exception:
+                        pass
+        except Exception:
+            pass
 
 def run_app():
     ensure_single_instance()
-    app = Windows11StackerApp()
+    app = UniversalStackerApp()
     app.mainloop()
 
 if __name__ == "__main__":

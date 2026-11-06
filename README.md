@@ -1,12 +1,13 @@
 # 🚀 Google AI Pro 24-Month Zero-Cost Stacking Automator
 
-[![Release: v1.1.0](https://img.shields.io/badge/Release-v1.1.0-blue.svg)](https://github.com/tumo07/Google-AI-Pro-24M-ZeroCost-Auto/releases/tag/v1.1.0)
+[![Release: v1.2.0](https://img.shields.io/badge/Release-v1.2.0-blue.svg)](https://github.com/tumo07/Google-AI-Pro-24M-ZeroCost-Auto/releases/tag/v1.2.0)
+[![macOS](https://img.shields.io/badge/macOS-Apple%20Silicon%20%7C%20Intel-black.svg?logo=apple)](setup_macos.sh)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![Python: 3.10+](https://img.shields.io/badge/Python-3.10%2B-brightgreen.svg)](https://www.python.org/)
 [![Playwright](https://img.shields.io/badge/Playwright-CDP%20Automation-orange.svg)](https://playwright.dev/)
 [![Verified Author](https://img.shields.io/badge/Author-tumo07-purple.svg)](https://github.com/tumo07)
 [![Cryptographically Signed](https://img.shields.io/badge/Release-Ed25519%20Signed-success.svg)](tools/verify_release.py)
-[![Changelog](https://img.shields.io/badge/Changelog-v1.1.0-informational.svg)](CHANGELOG.md)
+[![Changelog](https://img.shields.io/badge/Changelog-v1.2.0-informational.svg)](CHANGELOG.md)
 
 **Google AI Pro 24M Zero-Cost Auto** là bộ công cụ mã nguồn mở tự động hóa quy trình nghiên cứu cấu trúc gói đăng ký Google One / Google AI Pro (5 TB) và YouTube Premium 24 tháng với cơ chế bảo vệ nghiêm ngặt **US$0.00 (Zero-Billing Price Guard)**.
 
@@ -14,6 +15,7 @@
 
 ## 🌟 Tính Năng Nổi Bật (Key Features)
 
+- **🍎 Hỗ Trợ Toàn Diện macOS (Apple Silicon M1-M4 & Intel):** Tương thích 100% trên mọi dòng máy Mac (Apple Silicon arm64 và Intel x86_64). Hỗ trợ chạy 1-click qua file `Google_AI_Pro_Automator.command` trong Finder hoặc chạy qua Terminal.
 - **🛡️ Tuyệt Đối 0 Đồng (Zero-Billing Guarantee):** Tích hợp bộ kiểm soát giá đa tầng (`play_guard.js` & `automation_engine.py`). Chỉ thực hiện thao tác khi màn hình Google Play Checkout xác nhận hiển thị chính xác **$0.00 / Miễn phí**.
 - **🧩 Extension Đã Bản Địa Hóa Tiếng Việt:** Toàn bộ tiện ích mở rộng (`extensions/google_pro_6_12_24`) được dịch và thiết kế lại 100% bằng Tiếng Việt, hiển thị hướng dẫn chi tiết từng bước và trạng thái kích hoạt thời gian thực.
 - **🔄 Đa Tầng Cộng Dồn (Multi-Layer Stacking Engine):**
@@ -47,7 +49,7 @@ flowchart TD
 
 ## 📋 Yêu Cầu Hệ Thống (Prerequisites)
 
-1. **Hệ điều hành:** Windows 10 / 11 (64-bit).
+1. **Hệ điều hành:** Windows 10 / 11 (64-bit) HOẶC macOS 12+ (Monterey, Ventura, Sonoma, Sequoia trên chip Apple Silicon M1-M4 hoặc Intel).
 2. **Trình duyệt:** Microsoft Edge hoặc Google Chrome đã cài đặt mặc định.
 3. **Python:** Phiên bản 3.10 trở lên ([python.org](https://www.python.org/downloads/)). Nhớ tích chọn **"Add Python to PATH"** khi cài đặt.
 4. **Thẻ thanh toán quốc tế:** Visa hoặc Mastercard hỗ trợ thanh toán quốc tế và mở chiều thanh toán trực tuyến (Thẻ chỉ dùng để xác thực danh tính với Google $0.00 Temporary Hold, hoàn toàn không trừ tiền).
@@ -100,12 +102,21 @@ Nội dung file `config.json`:
 *(Ghi chú: Mã bưu chính 97201 là vùng miễn thuế bang Oregon, Hoa Kỳ).*
 
 ### 3. Khởi chạy ứng dụng
-Chạy giao diện trực quan:
-```powershell
-python gui_app.py
-```
-Hoặc chạy trực tiếp file khởi động tiện lợi:
-- **`start_gui.bat`**: Khởi chạy giao diện điều khiển Desktop hiện đại.
+
+#### 🪟 Dành cho Windows:
+- Nhấp đúp vào file **`start_gui.bat`** để mở giao diện điều khiển trực quan.
+- Hoặc chạy qua PowerShell: `python gui_app.py`
+
+#### 🍎 Dành cho macOS (Apple Silicon & Intel):
+- **Cách 1 (Nhanh nhất):** Nhấp đúp chuột vào file **`Google_AI_Pro_Automator.command`** trong Finder để tự động cài đặt và mở app.
+- **Cách 2 (Terminal):**
+  ```bash
+  # Chạy cài đặt môi trường tự động
+  chmod +x setup_macos.sh && ./setup_macos.sh
+  
+  # Khởi chạy giao diện trực quan
+  ./run_gui.sh
+  ```
 
 ---
 

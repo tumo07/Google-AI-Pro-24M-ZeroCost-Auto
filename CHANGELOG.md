@@ -4,6 +4,29 @@ Toàn bộ các thay đổi, tính năng mới và cải tiến của dự án *
 
 ---
 
+## [v1.2.0] - 2026-11-06
+
+### 🍎 Hỗ Trợ Toàn Diện Cho macOS (Apple Silicon M1-M4 & Intel Universal)
+- **🚀 Tương Thích Hoàn Hảo Cả 2 Kiến Trúc Apple Silicon (arm64) & Intel (x86_64):**
+  - Tự động nhận diện cấu trúc phần cứng máy Mac (`uname -m` ➔ `arm64` cho dòng chip Apple M1/M2/M3/M4 hoặc `x86_64` cho Intel).
+  - Điều chỉnh tương thích toàn bộ hệ thống lõi: `automation_engine.py`, `engine_stacker.py`, `launch_interactive_instance.py`.
+- **🖥️ Tự Động Định Vị Trình Duyệt macOS (macOS Native Browser Discovery):**
+  - Quét và nhận diện tự động các trình duyệt trong thư mục `/Applications`: **Google Chrome**, **Microsoft Edge**, **Brave Browser**, **Arc**, **Chromium** (bao gồm cả thư mục `~/Applications`).
+  - Tự động fallback linh hoạt sang biến môi trường `$PATH` (`shutil.which`).
+- **🪟 Khởi Chạy Cửa Sổ Trực Tiếp Trên Màn Hình macOS (Aqua Window Management):**
+  - Khởi động trình duyệt độc lập với đầy đủ tham số Remote CDP (Port 9320), nạp tiện ích mở rộng Browsec VPN và bộ Offer Injector qua tiến trình `start_new_session=True` và lệnh dự phòng `open -a`.
+  - Quản lý cổng CDP bằng `lsof -ti :9320` và tín hiệu POSIX `SIGKILL` chuyên dụng trên môi trường UNIX/macOS.
+- **⚡ Bộ Trình Khởi Chạy 1-Click Dành Riêng Cho Mac:**
+  - `Google_AI_Pro_Automator.command`: File thực thi trực tiếp bằng 1 cú click chuột (Double-Click) trong Finder của macOS, tự động khởi tạo môi trường và mở giao diện ứng dụng.
+  - `setup_macos.sh`: Kịch bản cài đặt tự động, kiểm tra phiên bản Python 3, tạo môi trường ảo `.venv`, cài đặt Playwright Chromium driver và cấp quyền thực thi.
+  - `run_gui.sh` & `run_stacker.sh`: Bộ lệnh khởi chạy trực tiếp qua Terminal (GUI hoặc CLI).
+- **🎨 Giao Diện Đa Nền Tảng Universal Fluent & Aqua GUI (`gui_app.py`):**
+  - Hiển thị huy hiệu nhận diện hệ điều hành và vi kiến trúc thời gian thực: `🍎 macOS (Apple Silicon arm64)` hoặc `🍎 macOS (Intel x86_64)` hoặc `🪟 Windows (x64)`.
+  - Tối ưu hóa phông chữ bản địa: chuẩn **SF Pro Display / SF Pro Text** trên macOS và **Segoe UI Variable** trên Windows.
+  - Xử lý tiến trình chạy đơn (`ensure_single_instance`) bằng `pgrep -f` trên macOS/UNIX.
+
+---
+
 ## [v1.1.0] - 2026-11-06
 
 ### 🌟 Tính Năng Mới (Added)

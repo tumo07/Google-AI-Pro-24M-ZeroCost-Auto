@@ -26,6 +26,9 @@ import json
 import time
 import asyncio
 import subprocess
+import signal
+import platform
+import shutil
 import re
 from typing import Optional, Callable, Dict, Any
 from playwright.async_api import async_playwright
@@ -38,14 +41,26 @@ ARTIFACTS_DIR = r"C:\Users\khoa\.gemini\antigravity\brain\bdb8ac8f-261e-4351-826
 import automation_engine
 
 def clean_port(port: int):
-    try:
-        p = subprocess.run(f"netstat -ano | findstr :{port}", shell=True, capture_output=True, text=True)
-        for line in p.stdout.splitlines():
-            if "LISTENING" in line:
-                pid = line.strip().split()[-1]
-                subprocess.run(f"taskkill /F /T /PID {pid}", shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-    except Exception:
-        pass
+    if sys.platform == "win32":
+        try:
+            p = subprocess.run(f"netstat -ano | findstr :{port}", shell=True, capture_output=True, text=True)
+            for line in p.stdout.splitlines():
+                if "LISTENING" in line:
+                    pid = line.strip().split()[-1]
+                    subprocess.run(f"taskkill /F /T /PID {pid}", shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        except Exception:
+            pass
+    else:
+        try:
+            p = subprocess.run(f"lsof -ti :{port}", shell=True, capture_output=True, text=True)
+            for pid in p.stdout.split():
+                if pid.strip():
+                    try:
+                        os.kill(int(pid.strip()), signal.SIGKILL)
+                    except Exception:
+                        pass
+        except Exception:
+            pass
 
 def log_to_file(msg: str):
     with open(LOG_PATH, "a", encoding="utf-8") as f:
@@ -134,7 +149,7 @@ class StackingEngine:
         self.emit("WARN", "🛑 Đã nhận yêu cầu dừng từ người dùng.")
 
     def launch_visible_edge(self, start_url: str = "https://accounts.google.com/ServiceLogin?hl=vi&continue=https%3A%2F%2Fone.google.com%2Fplans%3Fhl%3Dvi"):
-        """Launches Google Chrome on Session 1 (User Desktop) via Scheduled Task with Browsec & Injector."""
+        """Launches Google Chrome / Edge on macOS Desktop (Aqua) or Windows Desktop (Session 1) with Browsec & Injector."""
         clean_port(self.port)
         prepare_edge_profile(self.profile_dir)
         
@@ -145,24 +160,62 @@ class StackingEngine:
             
         ext_list = [vpn_ext, injector_ext]
         ext_str = ",".join([e for e in ext_list if os.path.exists(e)])
-        # Prefer Microsoft Edge (natively permits --load-extension on Windows)
-        browser_bin = automation_engine._find_chrome_path(prefer_edge=True)
+        browser_name, browser_bin = automation_engine._find_browser_binary(prefer_edge=(sys.platform == "win32"))
         
-        # In batch files, % must be escaped as %% so cmd.exe doesn't expand %3A into A, %2F into F
-        safe_url = start_url.replace("%", "%%")
-        bat_path = os.path.join(BASE_DIR, "temp_interactive_edge.bat")
-        with open(bat_path, "w", encoding="utf-8") as f:
-            f.write(f"""@echo off
+        if sys.platform == "darwin":
+            # macOS Universal launch (Apple Silicon arm64 & Intel x86_64)
+            cmd = [
+                browser_bin,
+                f"--remote-debugging-port={self.port}",
+                f"--user-data-dir={self.profile_dir}",
+                "--no-first-run",
+                "--no-default-browser-check",
+                "--disable-popup-blocking",
+                f"--load-extension={ext_str}",
+                f"--disable-extensions-except={ext_str}",
+                start_url
+            ]
+            self.emit("INFO", f"Opening interactive {browser_name} window on macOS desktop (Apple Silicon / Intel)...")
+            try:
+                self.browser_proc = subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
+            except Exception as e:
+                self.emit("WARN", f"Direct launch failed ({e}), falling back to 'open' command...")
+                subprocess.Popen(["open", "-a", browser_bin, "--args", f"--remote-debugging-port={self.port}", f"--user-data-dir={self.profile_dir}", f"--load-extension={ext_str}", f"--disable-extensions-except={ext_str}", start_url])
+            time.sleep(2)
+            self.emit("INFO", f"{browser_name} window launched on macOS.")
+        elif sys.platform == "win32":
+            # In batch files, % must be escaped as %% so cmd.exe doesn't expand %3A into A, %2F into F
+            safe_url = start_url.replace("%", "%%")
+            bat_path = os.path.join(BASE_DIR, "temp_interactive_edge.bat")
+            with open(bat_path, "w", encoding="utf-8") as f:
+                f.write(f"""@echo off
 start "" "{browser_bin}" --remote-debugging-port={self.port} --user-data-dir="{self.profile_dir}" --start-maximized --no-first-run --no-default-browser-check --disable-popup-blocking --load-extension="{ext_str}" --disable-extensions-except="{ext_str}" "{safe_url}"
 exit
 """)
-        task_name = "GoogleAI_InteractiveEdge"
-        self.emit("INFO", f"Opening interactive Edge window on your desktop (Session 1)...")
-        subprocess.run(f'schtasks.exe /create /tn "{task_name}" /tr "explorer.exe \\"{bat_path}\\"" /sc ONCE /st 23:59 /it /f', shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        subprocess.run(f'schtasks.exe /run /tn "{task_name}"', shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        time.sleep(2)
-        subprocess.run(f'schtasks.exe /delete /tn "{task_name}" /f', shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        self.emit("INFO", "Edge window launched.")
+            task_name = "GoogleAI_InteractiveEdge"
+            self.emit("INFO", f"Opening interactive {browser_name} window on your desktop (Session 1)...")
+            subprocess.run(f'schtasks.exe /create /tn "{task_name}" /tr "explorer.exe \"{bat_path}\"" /sc ONCE /st 23:59 /it /f', shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            subprocess.run(f'schtasks.exe /run /tn "{task_name}"', shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            time.sleep(2)
+            subprocess.run(f'schtasks.exe /delete /tn "{task_name}" /f', shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            self.emit("INFO", f"{browser_name} window launched.")
+        else:
+            # Linux
+            cmd = [
+                browser_bin,
+                f"--remote-debugging-port={self.port}",
+                f"--user-data-dir={self.profile_dir}",
+                "--no-first-run",
+                "--no-default-browser-check",
+                "--disable-popup-blocking",
+                f"--load-extension={ext_str}",
+                f"--disable-extensions-except={ext_str}",
+                start_url
+            ]
+            self.emit("INFO", f"Opening interactive {browser_name} on Linux desktop...")
+            subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
+            time.sleep(2)
+            self.emit("INFO", f"{browser_name} window launched.")
 
     async def probe_browsec_vpn_status(self, context) -> bool:
         """

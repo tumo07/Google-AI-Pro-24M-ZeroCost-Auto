@@ -13,6 +13,8 @@ import io
 import json
 import os
 import re
+import signal
+import platform
 import shutil
 import socket
 import struct
@@ -27,32 +29,91 @@ from playwright.async_api import async_playwright
 def _find_browser_binary(prefer_edge: bool = True):
     """
     Finds the best available browser executable across Edge, Chrome, Brave, and Chromium.
+    Supports Windows, macOS (Apple Silicon arm64 & Intel x86_64), and Linux.
     Returns (browser_name, browser_path).
     """
-    edge_paths = [
-        r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe",
-        r"C:\Program Files\Microsoft\Edge\Application\msedge.exe",
-        os.path.expandvars(r"%LOCALAPPDATA%\Microsoft\Edge\Application\msedge.exe"),
-    ]
-    chrome_paths = [
-        r"C:\Program Files\Google\Chrome\Application\chrome.exe",
-        r"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe",
-        os.path.expandvars(r"%LOCALAPPDATA%\Google\Chrome\Application\chrome.exe"),
-        os.path.expandvars(r"%PROGRAMFILES%\Google\Chrome\Application\chrome.exe"),
-        os.path.expandvars(r"%PROGRAMFILES(X86)%\Google\Chrome\Application\chrome.exe"),
-    ]
-    brave_paths = [
-        r"C:\Program Files\BraveSoftware\Brave-Browser\Application\brave.exe",
-        os.path.expandvars(r"%LOCALAPPDATA%\BraveSoftware\Brave-Browser\Application\brave.exe"),
-    ]
-    candidates = [("Edge", p) for p in edge_paths] + [("Chrome", p) for p in chrome_paths] + [("Brave", p) for p in brave_paths]
-    if not prefer_edge:
-        candidates = [("Chrome", p) for p in chrome_paths] + [("Edge", p) for p in edge_paths] + [("Brave", p) for p in brave_paths]
-    
-    for name, p in candidates:
-        if os.path.exists(p):
-            return name, p
-    return "Edge", edge_paths[0]
+    if sys.platform == "darwin":
+        # macOS paths (Universal Fat Binary: arm64 Apple Silicon & x86_64 Intel)
+        chrome_paths = [
+            "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+            os.path.expanduser("~/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"),
+        ]
+        edge_paths = [
+            "/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge",
+            os.path.expanduser("~/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge"),
+        ]
+        brave_paths = [
+            "/Applications/Brave Browser.app/Contents/MacOS/Brave Browser",
+            os.path.expanduser("~/Applications/Brave Browser.app/Contents/MacOS/Brave Browser"),
+        ]
+        chromium_paths = [
+            "/Applications/Chromium.app/Contents/MacOS/Chromium",
+            os.path.expanduser("~/Applications/Chromium.app/Contents/MacOS/Chromium"),
+        ]
+        arc_paths = [
+            "/Applications/Arc.app/Contents/MacOS/Arc",
+            os.path.expanduser("~/Applications/Arc.app/Contents/MacOS/Arc"),
+        ]
+        if prefer_edge:
+            candidates = [("Edge", p) for p in edge_paths] + [("Chrome", p) for p in chrome_paths] + [("Brave", p) for p in brave_paths] + [("Chromium", p) for p in chromium_paths] + [("Arc", p) for p in arc_paths]
+        else:
+            candidates = [("Chrome", p) for p in chrome_paths] + [("Edge", p) for p in edge_paths] + [("Brave", p) for p in brave_paths] + [("Chromium", p) for p in chromium_paths] + [("Arc", p) for p in arc_paths]
+
+        for name, p in candidates:
+            if os.path.exists(p):
+                return name, p
+
+        for cmd_name, disp in [("google-chrome", "Chrome"), ("chrome", "Chrome"), ("microsoft-edge", "Edge"), ("brave", "Brave")]:
+            w = shutil.which(cmd_name)
+            if w:
+                return disp, w
+        return "Chrome", chrome_paths[0]
+
+    elif sys.platform == "win32":
+        edge_paths = [
+            r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe",
+            r"C:\Program Files\Microsoft\Edge\Application\msedge.exe",
+            os.path.expandvars(r"%LOCALAPPDATA%\Microsoft\Edge\Application\msedge.exe"),
+        ]
+        chrome_paths = [
+            r"C:\Program Files\Google\Chrome\Application\chrome.exe",
+            r"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe",
+            os.path.expandvars(r"%LOCALAPPDATA%\Google\Chrome\Application\chrome.exe"),
+            os.path.expandvars(r"%PROGRAMFILES%\Google\Chrome\Application\chrome.exe"),
+            os.path.expandvars(r"%PROGRAMFILES(X86)%\Google\Chrome\Application\chrome.exe"),
+        ]
+        brave_paths = [
+            r"C:\Program Files\BraveSoftware\Brave-Browser\Application\brave.exe",
+            os.path.expandvars(r"%LOCALAPPDATA%\BraveSoftware\Brave-Browser\Application\brave.exe"),
+        ]
+        candidates = [("Edge", p) for p in edge_paths] + [("Chrome", p) for p in chrome_paths] + [("Brave", p) for p in brave_paths]
+        if not prefer_edge:
+            candidates = [("Chrome", p) for p in chrome_paths] + [("Edge", p) for p in edge_paths] + [("Brave", p) for p in brave_paths]
+
+        for name, p in candidates:
+            if os.path.exists(p):
+                return name, p
+        return "Edge", edge_paths[0]
+
+    else:
+        # Linux
+        linux_candidates = [
+            ("Chrome", "/usr/bin/google-chrome"),
+            ("Chrome", "/usr/bin/google-chrome-stable"),
+            ("Edge", "/usr/bin/microsoft-edge"),
+            ("Edge", "/usr/bin/microsoft-edge-stable"),
+            ("Brave", "/usr/bin/brave-browser"),
+            ("Chromium", "/usr/bin/chromium-browser"),
+            ("Chromium", "/usr/bin/chromium"),
+        ]
+        for name, p in linux_candidates:
+            if os.path.exists(p):
+                return name, p
+        for cmd_name, disp in [("google-chrome", "Chrome"), ("microsoft-edge", "Edge"), ("brave-browser", "Brave"), ("chromium", "Chromium")]:
+            w = shutil.which(cmd_name)
+            if w:
+                return disp, w
+        return "Chrome", "/usr/bin/google-chrome"
 
 def _find_chrome_path(prefer_edge: bool = True) -> str:
     name, path = _find_browser_binary(prefer_edge=prefer_edge)
@@ -2182,11 +2243,20 @@ class GoogleUltraAutomator:
 
         # Cleanly kill any lingering process listening on self.port
         try:
-            net_out = subprocess.check_output(f"netstat -ano | findstr :{self.port}", shell=True).decode("gbk", errors="ignore")
-            for line in net_out.splitlines():
-                if "LISTENING" in line:
-                    old_pid = line.strip().split()[-1]
-                    subprocess.run(f"taskkill /F /T /PID {old_pid}", shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            if sys.platform == "win32":
+                net_out = subprocess.check_output(f"netstat -ano | findstr :{self.port}", shell=True).decode("gbk", errors="ignore")
+                for line in net_out.splitlines():
+                    if "LISTENING" in line:
+                        old_pid = line.strip().split()[-1]
+                        subprocess.run(f"taskkill /F /T /PID {old_pid}", shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            else:
+                out = subprocess.check_output(f"lsof -ti :{self.port}", shell=True, text=True)
+                for pid in out.split():
+                    if pid.strip():
+                        try:
+                            os.kill(int(pid.strip()), signal.SIGKILL)
+                        except Exception:
+                            pass
         except Exception:
             pass
         await asyncio.sleep(0.8)
@@ -2240,8 +2310,15 @@ class GoogleUltraAutomator:
                 await self.proxy_bridge.stop()
             if self.proc:
                 try:
-                    subprocess.run(f"taskkill /F /T /PID {self.proc.pid}", shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                    if sys.platform == "win32":
+                        subprocess.run(f"taskkill /F /T /PID {self.proc.pid}", shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                    else:
+                        self.proc.terminate()
+                        self.proc.wait(timeout=2)
                 except Exception:
-                    pass
+                    try:
+                        self.proc.kill()
+                    except Exception:
+                        pass
 
 

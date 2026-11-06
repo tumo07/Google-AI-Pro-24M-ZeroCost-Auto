@@ -12,6 +12,9 @@ import sys
 import json
 import time
 import subprocess
+import signal
+import platform
+import shutil
 import re
 from typing import Optional, Dict, Any
 
@@ -59,20 +62,32 @@ def get_next_account_id(cfg: Dict[str, Any]) -> str:
     return f"Account_{idx}"
 
 def clean_port(port: int = 9320):
-    try:
-        net_out = subprocess.check_output(f"netstat -ano | findstr :{port}", shell=True).decode("gbk", errors="ignore")
-        for line in net_out.splitlines():
-            if "LISTENING" in line:
-                old_pid = line.strip().split()[-1]
-                subprocess.run(f"taskkill /F /T /PID {old_pid}", shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-                log(f"Cleaned old process on port {port} (PID: {old_pid})")
-    except Exception:
-        pass
+    if sys.platform == "win32":
+        try:
+            net_out = subprocess.check_output(f"netstat -ano | findstr :{port}", shell=True).decode("gbk", errors="ignore")
+            for line in net_out.splitlines():
+                if "LISTENING" in line:
+                    old_pid = line.strip().split()[-1]
+                    subprocess.run(f"taskkill /F /T /PID {old_pid}", shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                    log(f"Cleaned old process on port {port} (PID: {old_pid})")
+        except Exception:
+            pass
+    else:
+        try:
+            p = subprocess.run(f"lsof -ti :{port}", shell=True, capture_output=True, text=True)
+            for pid in p.stdout.split():
+                if pid.strip():
+                    try:
+                        os.kill(int(pid.strip()), signal.SIGKILL)
+                        log(f"Cleaned old process on port {port} (PID: {pid.strip()})")
+                    except Exception:
+                        pass
+        except Exception:
+            pass
 
 def launch_visible_edge_via_task(profile_dir: str, port: int = 9320, start_url: str = "https://accounts.google.com/ServiceLogin?continue=https%3A%2F%2Fone.google.com%2Fplans%3Fhl%3Den"):
     """
-    Uses Windows Task Scheduler with explorer.exe to bypass Session 0 UI Isolation,
-    launching Edge directly onto the active user's desktop (Session 1).
+    Launches browser directly onto the active desktop (macOS Aqua / Windows Session 1).
     """
     clean_port(port)
     os.makedirs(profile_dir, exist_ok=True)
@@ -85,28 +100,59 @@ def launch_visible_edge_via_task(profile_dir: str, port: int = 9320, start_url: 
     ext_list = [vpn_ext, injector_ext]
     ext_str = ",".join([e for e in ext_list if os.path.exists(e)])
     
-    browser_bin = automation_engine._find_chrome_path(prefer_edge=True)
+    browser_name, browser_bin = automation_engine._find_browser_binary(prefer_edge=(sys.platform == "win32"))
     
-    # In batch files, % must be escaped as %% so cmd.exe doesn't expand %3A into A, %2F into F
-    safe_url = start_url.replace("%", "%%")
-    # Write a temporary launcher batch file
-    launcher_bat = os.path.join(BASE_DIR, "temp_launch_session1.bat")
-    bat_content = f"""@echo off
+    if sys.platform == "darwin":
+        cmd = [
+            browser_bin,
+            f"--remote-debugging-port={port}",
+            f"--user-data-dir={profile_dir}",
+            "--no-first-run",
+            "--no-default-browser-check",
+            "--disable-popup-blocking",
+            f"--load-extension={ext_str}",
+            f"--disable-extensions-except={ext_str}",
+            start_url
+        ]
+        log(f"🚀 Launching {browser_name} on macOS (Apple Silicon / Intel)...")
+        subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
+        time.sleep(2)
+        log(f"✅ {browser_name} window launched on macOS.")
+    elif sys.platform == "win32":
+        safe_url = start_url.replace("%", "%%")
+        launcher_bat = os.path.join(BASE_DIR, "temp_launch_session1.bat")
+        bat_content = f"""@echo off
 start "" "{browser_bin}" --remote-debugging-port={port} --user-data-dir="{profile_dir}" --start-maximized --no-first-run --no-default-browser-check --disable-popup-blocking --load-extension="{ext_str}" --disable-extensions-except="{ext_str}" "{safe_url}"
 exit
 """
-    with open(launcher_bat, "w", encoding="utf-8") as f:
-        f.write(bat_content)
+        with open(launcher_bat, "w", encoding="utf-8") as f:
+            f.write(bat_content)
+            
+        task_name = "GoogleAI_InteractiveLaunch"
+        tr_command = f'explorer.exe "{launcher_bat}"'
         
-    task_name = "GoogleAI_InteractiveLaunch"
-    tr_command = f'explorer.exe "{launcher_bat}"'
-    
-    log(f"🚀 Creating Interactive Scheduled Task '{task_name}' to launch Edge on Session 1 desktop...")
-    subprocess.run(f'schtasks.exe /create /tn "{task_name}" /tr "{tr_command}" /sc ONCE /st 00:00 /it /f', shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-    subprocess.run(f'schtasks.exe /run /tn "{task_name}"', shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-    time.sleep(2)
-    subprocess.run(f'schtasks.exe /delete /tn "{task_name}" /f', shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-    log("✅ Edge browser window launched interactively on your screen.")
+        log(f"🚀 Creating Interactive Scheduled Task '{task_name}' to launch {browser_name} on Session 1 desktop...")
+        subprocess.run(f'schtasks.exe /create /tn "{task_name}" /tr "{tr_command}" /sc ONCE /st 00:00 /it /f', shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        subprocess.run(f'schtasks.exe /run /tn "{task_name}"', shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        time.sleep(2)
+        subprocess.run(f'schtasks.exe /delete /tn "{task_name}" /f', shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        log(f"✅ {browser_name} browser window launched interactively on your screen.")
+    else:
+        cmd = [
+            browser_bin,
+            f"--remote-debugging-port={port}",
+            f"--user-data-dir={profile_dir}",
+            "--no-first-run",
+            "--no-default-browser-check",
+            "--disable-popup-blocking",
+            f"--load-extension={ext_str}",
+            f"--disable-extensions-except={ext_str}",
+            start_url
+        ]
+        log(f"🚀 Launching {browser_name} on Linux desktop...")
+        subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
+        time.sleep(2)
+        log(f"✅ {browser_name} window launched on Linux.")
 
 class InteractiveInstanceAutomator:
     def __init__(self, account_id: Optional[str] = None):
