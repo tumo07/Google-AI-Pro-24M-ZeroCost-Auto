@@ -45,13 +45,86 @@ if sys.stdout is None or sys.stderr is None or (sys.platform == "darwin" and get
         pass
 
 _instance_lock_handle = None
+_MAIN_WINDOW_TITLE = "Google AI Pro 24-Month Automator v1.3.1"
+
+def _focus_existing_window_or_cleanup_zombies() -> bool:
+    """
+    On Windows:
+    1. Searches for an existing visible top-level window matching _MAIN_WINDOW_TITLE.
+       If found, restores & brings it to the foreground and returns True (caller exits).
+    2. If NO visible window exists, any other GoogleAIProAutomator.exe process holding
+       the mutex is a headless/zombie instance -> terminates it and returns False so
+       this new launch can take over and open the UI cleanly.
+    """
+    if sys.platform != "win32":
+        return False
+    try:
+        import ctypes
+        from ctypes import wintypes
+        user32 = ctypes.windll.user32
+        WNDENUMPROC = ctypes.WINFUNCTYPE(wintypes.BOOL, wintypes.HWND, wintypes.LPARAM)
+        found_hwnds = []
+
+        def _enum_cb(hwnd, lparam):
+            if user32.IsWindowVisible(hwnd):
+                length = user32.GetWindowTextLengthW(hwnd)
+                if length > 0:
+                    buf = ctypes.create_unicode_buffer(length + 1)
+                    user32.GetWindowTextW(hwnd, buf, length + 1)
+                    if "Google AI Pro 24-Month Automator" in buf.value:
+                        found_hwnds.append(hwnd)
+            return True
+
+        user32.EnumWindows(WNDENUMPROC(_enum_cb), 0)
+        if found_hwnds:
+            hwnd = found_hwnds[0]
+            SW_RESTORE = 9
+            SW_SHOW = 5
+            if user32.IsIconic(hwnd):
+                user32.ShowWindow(hwnd, SW_RESTORE)
+            else:
+                user32.ShowWindow(hwnd, SW_SHOW)
+            user32.SetForegroundWindow(hwnd)
+            return True
+
+        # Wait briefly in case a sibling instance is in the middle of initializing its window
+        import time as _t
+        _t.sleep(1.5)
+        user32.EnumWindows(WNDENUMPROC(_enum_cb), 0)
+        if found_hwnds:
+            hwnd = found_hwnds[0]
+            user32.ShowWindow(hwnd, 9 if user32.IsIconic(hwnd) else 5)
+            user32.SetForegroundWindow(hwnd)
+            return True
+
+        # Still no visible window found -> kill any zombie GoogleAIProAutomator.exe processes (except self & parent)
+        my_pid = os.getpid()
+        parent_pid = os.getppid()
+        import subprocess
+        out = subprocess.check_output(
+            'tasklist /FI "IMAGENAME eq GoogleAIProAutomator.exe" /FO CSV /NH',
+            shell=True, text=True, stderr=subprocess.DEVNULL
+        )
+        for line in out.splitlines():
+            parts = [p.strip('"') for p in line.split('","')]
+            if len(parts) >= 2 and parts[1].isdigit():
+                pid = int(parts[1])
+                if pid not in (my_pid, parent_pid):
+                    subprocess.run(
+                        f"taskkill /F /T /PID {pid}",
+                        shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+                    )
+    except Exception:
+        pass
+    return False
 
 def ensure_single_instance():
     r"""
     Cross-platform native single instance lock (executed BEFORE heavy imports):
     - Windows: Kernel Named Mutex (Local\GoogleAIProAutomatorLock_tumo07).
-      Immune to Hyper-V / WinNAT reserved port ranges (WinError 10013),
-      firewalls, antivirus port blocks, and PowerShell permission errors.
+      If another instance holds the mutex:
+        * If its window is visible -> brings it to front and exits.
+        * If it is a headless zombie (MainWindowHandle == 0) -> kills the zombie and acquires the lock!
     - macOS / Linux: fcntl.flock on a temporary file lock.
     """
     global _instance_lock_handle
@@ -60,14 +133,29 @@ def ensure_single_instance():
     if sys.platform == "win32":
         try:
             import ctypes
+            import time as _t
             ERROR_ALREADY_EXISTS = 183
-            _instance_lock_handle = ctypes.windll.kernel32.CreateMutexW(
+            kernel32 = ctypes.windll.kernel32
+            kernel32.SetLastError(0)
+            handle = kernel32.CreateMutexW(
                 None, False, "Local\\GoogleAIProAutomatorLock_tumo07"
             )
-            last_err = ctypes.windll.kernel32.GetLastError()
+            last_err = kernel32.GetLastError()
             if last_err == ERROR_ALREADY_EXISTS:
-                print("[INFO] Một phiên bản của ứng dụng đang chạy.")
-                os._exit(0)
+                if _focus_existing_window_or_cleanup_zombies():
+                    print("[INFO] Đã chuyển tiêu điểm sang cửa sổ ứng dụng đang mở.")
+                    os._exit(0)
+                # Zombie was cleaned up -> close old handle, wait briefly, and re-acquire mutex
+                try:
+                    kernel32.CloseHandle(handle)
+                except Exception:
+                    pass
+                _t.sleep(0.3)
+                kernel32.SetLastError(0)
+                handle = kernel32.CreateMutexW(
+                    None, False, "Local\\GoogleAIProAutomatorLock_tumo07"
+                )
+            _instance_lock_handle = handle
             return True
         except Exception:
             return True
@@ -191,6 +279,18 @@ class UniversalStackerApp(ctk.CTk):
         self._refresh_accounts()
         _apply_fluent_theme(self)
         self.protocol("WM_DELETE_WINDOW", self._on_close)
+        # Ensure window is visible, raised, and focused when launched from Explorer or Finder
+        self.after(80, self._bring_window_to_front)
+
+    def _bring_window_to_front(self):
+        try:
+            self.deiconify()
+            self.lift()
+            self.focus_force()
+            self.attributes("-topmost", True)
+            self.after(350, lambda: self.attributes("-topmost", False))
+        except Exception:
+            pass
 
     def _on_close(self):
         try:
