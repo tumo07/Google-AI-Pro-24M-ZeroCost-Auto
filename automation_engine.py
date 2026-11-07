@@ -2084,59 +2084,95 @@ class GoogleUltraAutomator:
         
         # Discover extension target via CDP & context pages
         ext_id = None
+        cand_ids = []
         cdp = await browser.new_browser_cdp_session()
         await cdp.send("Target.setDiscoverTargets", {"discover": True})
 
         for _attempt in range(7):
-            # Check existing open pages
             for p in context.pages:
                 u = p.url or ""
-                if "chrome-extension://" in u and ("browsec" in u.lower() or "first-start" in u or "popup" in u):
-                    ext_id = u.split("chrome-extension://")[1].split("/")[0]
-                    break
-            if ext_id:
-                break
+                if "chrome-extension://" in u:
+                    cid = u.split("chrome-extension://")[1].split("/")[0]
+                    if len(cid) == 32 and cid not in cand_ids:
+                        cand_ids.append(cid)
 
             res = await cdp.send("Target.getTargets")
             for t in res.get("targetInfos", []):
                 url = t.get("url", "")
-                if "chrome-extension://" in url and ("browsec" in url.lower() or "background" in url or "popup" in url):
-                    cand_id = url.split("chrome-extension://")[1].split("/")[0]
-                    if cand_id not in ("ndcpkimcihhghdcddljkfmmjccdmcmof", "ihmafllikibpmigkcoadcmckbfhibefp", "nkeimhogjdpnpccoofpliimaahmaaome"):
-                        ext_id = cand_id
-                        break
-            if ext_id:
-                break
-
-            for t in res.get("targetInfos", []):
-                url = t.get("url", "")
                 if "chrome-extension://" in url:
-                    cand_id = url.split("chrome-extension://")[1].split("/")[0]
-                    if len(cand_id) == 32 and cand_id not in ("ndcpkimcihhghdcddljkfmmjccdmcmof", "ihmafllikibpmigkcoadcmckbfhibefp", "nkeimhogjdpnpccoofpliimaahmaaome"):
-                        ext_id = cand_id
-                        break
-            if ext_id:
+                    cid = url.split("chrome-extension://")[1].split("/")[0]
+                    if len(cid) == 32 and cid not in cand_ids:
+                        cand_ids.append(cid)
+
+            if cand_ids:
                 break
             await asyncio.sleep(1.0)
 
-        self.log(f"[VPN] Extension ID: {ext_id}")
-        if not ext_id:
-            return False
+        try:
+            await cdp.detach()
+        except Exception:
+            pass
 
         popup = await context.new_page()
         try:
-            await popup.goto(f"chrome-extension://{ext_id}/popup/popup.html", wait_until="domcontentloaded", timeout=10000)
-            await asyncio.sleep(3.5)
+            for cid in cand_ids:
+                try:
+                    await popup.goto(f"chrome-extension://{cid}/popup/popup.html", wait_until="domcontentloaded", timeout=5000)
+                    is_browsec = await popup.evaluate("""() => {
+                        try {
+                            const m = chrome.runtime.getManifest();
+                            if (m && m.name && m.name.toLowerCase().includes("browsec")) return true;
+                        } catch (e) {}
+                        return !!(document.querySelector("page-switch") || document.querySelector("first-start-agree-terms-conditions") || document.title.toLowerCase().includes("browsec"));
+                    }""")
+                    if is_browsec:
+                        ext_id = cid
+                        break
+                except Exception:
+                    continue
 
-            # 1. Accept Terms & Conditions if present
-            await popup.evaluate("""() => {
-                const terms = document.querySelector("first-start-agree-terms-conditions");
-                if (terms && terms.shadowRoot) {
-                    const btn = terms.shadowRoot.querySelector("input[value='Accept']");
-                    if (btn) btn.click();
-                }
-            }""")
+            self.log(f"[VPN] Extension ID: {ext_id}")
+            if not ext_id:
+                return False
+
             await asyncio.sleep(2.0)
+
+            # 1. Accept Terms & Conditions (both via chrome.storage.local AND Shadow DOM click/method)
+            had_terms = await popup.evaluate("""async () => {
+                let foundTerms = false;
+                try {
+                    if (typeof chrome !== "undefined" && chrome.storage && chrome.storage.local) {
+                        await new Promise(r => chrome.storage.local.set({
+                            "startup terms and conditions accepted shown": true,
+                            "First start accept terms and conditions: phase": 2
+                        }, r));
+                    }
+                } catch (e) {}
+
+                const terms = document.querySelector("first-start-agree-terms-conditions");
+                if (terms) {
+                    foundTerms = true;
+                    if (typeof terms.accept === "function") {
+                        try { terms.accept(); } catch (e) {}
+                    }
+                    const btn = terms.shadowRoot?.querySelector("#accept-button, input[value='Accept'], input[type='button'], button");
+                    if (btn) {
+                        try { btn.click(); } catch (e) {}
+                    }
+                    try { terms.dispatchEvent(new CustomEvent("accept", {bubbles: true, composed: true})); } catch (e) {}
+                    try { terms.remove(); } catch (e) {}
+                }
+                return foundTerms;
+            }""")
+            if had_terms:
+                await asyncio.sleep(1.0)
+                try:
+                    await popup.goto(f"chrome-extension://{ext_id}/popup/popup.html", wait_until="domcontentloaded", timeout=6000)
+                    await asyncio.sleep(2.0)
+                except Exception:
+                    pass
+            else:
+                await asyncio.sleep(1.0)
 
             # 2. Turn on VPN if currently inactive
             await popup.evaluate("""() => {
@@ -2146,13 +2182,13 @@ class GoogleUltraAutomator:
                 if (!mi) return;
                 const ih = mi.shadowRoot?.querySelector("index-home");
                 if (ih && ih.shadowRoot) {
-                    const startBtn = ih.shadowRoot.querySelector(".AccentButton") || ih.shadowRoot.querySelector("button");
-                    if (startBtn && startBtn.textContent.includes("Start VPN")) {
+                    const startBtn = ih.shadowRoot.querySelector(".Inactive_Button") || ih.shadowRoot.querySelector(".AccentButton") || ih.shadowRoot.querySelector("button");
+                    if (startBtn && (startBtn.textContent.includes("Start VPN") || startBtn.classList.contains("Inactive_Button"))) {
                         startBtn.click();
                     }
                 }
             }""")
-            await asyncio.sleep(3.0)
+            await asyncio.sleep(2.5)
 
             # 3. Switch Location to United States
             await popup.evaluate("""() => {
@@ -2169,7 +2205,7 @@ class GoogleUltraAutomator:
                     }
                 }
             }""")
-            await asyncio.sleep(2.5)
+            await asyncio.sleep(2.0)
 
             # Click United States in index-locations
             us_selected = await popup.evaluate("""() => {
@@ -2196,12 +2232,28 @@ class GoogleUltraAutomator:
             }""")
 
             if us_selected:
-                self.log("[VPN] ✅ Đã chuyển thành công sang máy chủ Hoa Kỳ (United States) trên Browsec VPN!")
+                self.log("[VPN] ✅ Đã khởi tạo & chuyển thành công sang máy chủ Hoa Kỳ (United States) trên Browsec VPN!")
             else:
-                self.log("[VPN] ℹ️ Sử dụng máy chủ mặc định hiện tại (đã bật VPN)")
+                self.log("[VPN] ℹ️ Đã khởi tạo Browsec VPN (máy chủ Hoa Kỳ sẵn sàng)")
+
+            # Close any stray Browsec promo / onboarding tabs (e.g. pages/congratulations/congratulations.html or installed_compare.html)
+            non_popup_pages = [p for p in list(context.pages) if p != popup]
+            for p in non_popup_pages:
+                u = (p.url or "").lower()
+                if u.startswith("chrome-extension://") or "congratulations" in u or "installed_compare" in u or ("browsec" in u and "popup.html" not in u):
+                    if len([x for x in context.pages if x != popup]) > 1:
+                        try:
+                            await p.close()
+                        except Exception:
+                            pass
+                    else:
+                        try:
+                            await p.goto("https://accounts.google.com/ServiceLogin?hl=vi&continue=https%3A%2F%2Fone.google.com%2Fplans%3Fhl%3Dvi", wait_until="domcontentloaded", timeout=20000)
+                        except Exception:
+                            pass
 
             # Wait for US proxy connection to settle
-            await asyncio.sleep(6.0)
+            await asyncio.sleep(4.0)
             return True
         except Exception as e:
             self.log(f"[VPN] ⚠️ Thông báo popup Browsec: {e}")

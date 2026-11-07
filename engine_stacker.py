@@ -44,16 +44,22 @@ else:
 if sys.platform == "darwin" and ".app/Contents/" in _raw_dir.replace("\\", "/"):
     BASE_DIR = os.path.expanduser("~/Library/Application Support/GoogleAIProAutomator")
     os.makedirs(BASE_DIR, exist_ok=True)
-    # Sync bundled extensions into ~/Library/Application Support/GoogleAIProAutomator/extensions so Chrome/Edge can load them outside .app bundle
+elif sys.platform == "win32" and ("\\temp\\7z" in _raw_dir.lower() or "\\temp\\rar$" in _raw_dir.lower() or "\\appdata\\local\\temp\\" in _raw_dir.lower()):
+    # Protect against users double-clicking the .exe directly inside a 7-Zip/WinRAR temp folder
+    BASE_DIR = os.path.join(os.environ.get("LOCALAPPDATA", os.path.expanduser("~")), "GoogleAIProAutomator")
+    os.makedirs(BASE_DIR, exist_ok=True)
+else:
+    BASE_DIR = _raw_dir
+
+# Always sync bundled extensions into BASE_DIR/extensions so Chrome/Edge can load them from a persistent path
+if RESOURCE_DIR != BASE_DIR:
     _bundled_ext = os.path.join(RESOURCE_DIR, "extensions")
     _user_ext = os.path.join(BASE_DIR, "extensions")
-    if os.path.exists(_bundled_ext) and not os.path.exists(_user_ext):
+    if os.path.exists(_bundled_ext):
         try:
             shutil.copytree(_bundled_ext, _user_ext, dirs_exist_ok=True)
         except Exception:
             pass
-else:
-    BASE_DIR = _raw_dir
 
 CONFIG_PATH = os.path.join(BASE_DIR, "config.json")
 LOG_PATH = os.path.join(BASE_DIR, "execution.log")
@@ -192,11 +198,21 @@ class StackingEngine:
         self.stop_requested = True
         self.emit("WARN", "🛑 Đã nhận yêu cầu dừng từ người dùng.")
 
-    def _is_cdp_ready(self) -> bool:
+    def _is_cdp_ready(self, require_page: bool = False) -> bool:
         import urllib.request
         try:
             with urllib.request.urlopen(f"http://127.0.0.1:{self.port}/json/version", timeout=0.8) as resp:
-                return resp.status == 200
+                if resp.status != 200:
+                    return False
+            if require_page:
+                with urllib.request.urlopen(f"http://127.0.0.1:{self.port}/json", timeout=0.8) as resp:
+                    targets = json.loads(resp.read().decode("utf-8", errors="ignore"))
+                    has_page = any(
+                        t.get("type") == "page" and not (t.get("url") or "").startswith("chrome-extension://")
+                        for t in targets
+                    )
+                    return has_page
+            return True
         except Exception:
             return False
 
@@ -370,7 +386,7 @@ class StackingEngine:
 
     def launch_visible_edge(self, start_url: str = "https://accounts.google.com/ServiceLogin?hl=vi&continue=https%3A%2F%2Fone.google.com%2Fplans%3Fhl%3Dvi", reuse_if_open: bool = False):
         """Launches Google Chrome / Chromium / Edge on macOS Desktop (Aqua) or Windows Desktop (Session 1) with Browsec & Injector."""
-        if reuse_if_open and StackingEngine._active_cdp_account == self.account_id and self._is_cdp_ready():
+        if reuse_if_open and StackingEngine._active_cdp_account == self.account_id and self._is_cdp_ready(require_page=True):
             self.emit("INFO", f"♻️ Đang tái sử dụng cửa sổ trình duyệt đang mở của [{self.account_id}].")
             return
 
@@ -393,6 +409,7 @@ class StackingEngine:
         ext_str = ",".join([e for e in ext_list if os.path.exists(e)])
         ext_unlock_flags = [
             "--enable-extensions",
+            "--disable-background-mode",
             "--disable-features=DisableLoadExtensionCommandLineSwitch,ExtensionManifestV2Unsupported,ExtensionManifestV2Disabled",
             "--remote-allow-origins=*",
         ]
@@ -470,7 +487,7 @@ class StackingEngine:
                 bat_path = os.path.join(BASE_DIR, "temp_interactive_edge.bat")
                 with open(bat_path, "w", encoding="utf-8") as f:
                     f.write(f"""@echo off
-start "" "{browser_bin}" --remote-debugging-port={self.port} --user-data-dir="{self.profile_dir}" --start-maximized --no-first-run --no-default-browser-check --disable-popup-blocking --enable-extensions --disable-features=DisableLoadExtensionCommandLineSwitch,ExtensionManifestV2Unsupported,ExtensionManifestV2Disabled --remote-allow-origins=* --load-extension="{ext_str}" --disable-extensions-except="{ext_str}" "{safe_url}"
+start "" "{browser_bin}" --remote-debugging-port={self.port} --user-data-dir="{self.profile_dir}" --start-maximized --no-first-run --no-default-browser-check --disable-popup-blocking --disable-background-mode --enable-extensions --disable-features=DisableLoadExtensionCommandLineSwitch,ExtensionManifestV2Unsupported,ExtensionManifestV2Disabled --remote-allow-origins=* --load-extension="{ext_str}" --disable-extensions-except="{ext_str}" "{safe_url}"
 exit
 """)
                 task_name = "GoogleAI_InteractiveEdge"
@@ -501,46 +518,105 @@ exit
             StackingEngine._active_cdp_account = self.account_id
             self.emit("INFO", f"{browser_name} window launched.")
 
-    async def show_guidance_popup(self, page, badge: str, title: str, steps: list):
-        """Injects a modern, floating in-browser guidance banner to guide the user."""
+    def launch_and_prepare_signin(self, start_url: str = "https://accounts.google.com/ServiceLogin?hl=vi&continue=https%3A%2F%2Fone.google.com%2Fplans%3Fhl%3Dvi"):
+        """Launches interactive browser, initializes Browsec VPN (Terms accepted + US server), and ensures Google Login page is active (never about:blank)."""
+        self.launch_visible_edge(start_url=start_url, reuse_if_open=False)
+
+        async def _init_session():
+            await asyncio.sleep(2.0)
+            async with async_playwright() as p:
+                browser = None
+                for _ in range(12):
+                    try:
+                        browser = await p.chromium.connect_over_cdp(f"http://127.0.0.1:{self.port}")
+                        break
+                    except Exception:
+                        await asyncio.sleep(0.8)
+                if not browser:
+                    return
+                context = browser.contexts[0]
+                await self._attach_cdp_extensions(context)
+                page = context.pages[0] if context.pages else await context.new_page()
+                automator = automation_engine.GoogleUltraAutomator(
+                    account=self.account,
+                    card=self.card,
+                    target_region="US",
+                    target_plan="pro_2year_zero",
+                    auto_cancel=True,
+                    port=self.port,
+                    on_log=lambda m: self.emit("ENGINE", m),
+                    use_vpn=True
+                )
+                await automator.activate_vpn_to_us(browser, context, page)
+                valid_pages = [pg for pg in context.pages if not (pg.url or "").startswith("chrome-extension://")]
+                main_page = valid_pages[0] if valid_pages else (context.pages[0] if context.pages else await context.new_page())
+                cur_u = (main_page.url or "").lower()
+                if not any(d in cur_u for d in ("accounts.google.com", "one.google.com", "myaccount.google.com", "play.google.com")):
+                    try:
+                        await main_page.goto(start_url, wait_until="domcontentloaded", timeout=30000)
+                    except Exception:
+                        pass
+                try:
+                    await main_page.bring_to_front()
+                except Exception:
+                    pass
+                self.emit("INFO", "✅ Cửa sổ đăng nhập Google & tiện ích Browsec VPN (Hoa Kỳ) đã sẵn sàng!")
+
         try:
-            steps_html = "".join([f"<li style='margin-bottom:6px;'>{s}</li>" for s in steps])
-            script = f"""
-            (() => {{
-                try {{
-                    let existing = document.getElementById('google-ai-pro-guidance');
-                    if (existing) existing.remove();
-                    let div = document.createElement('div');
-                    div.id = 'google-ai-pro-guidance';
-                    div.style.position = 'fixed';
-                    div.style.top = '20px';
-                    div.style.right = '20px';
-                    div.style.maxWidth = '420px';
-                    div.style.backgroundColor = '#18181b';
-                    div.style.color = '#f4f4f5';
-                    div.style.padding = '16px 20px';
-                    div.style.borderRadius = '12px';
-                    div.style.boxShadow = '0 10px 30px rgba(0,0,0,0.6)';
-                    div.style.zIndex = '2147483647';
-                    div.style.fontFamily = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-                    div.style.border = '1px solid #38bdf8';
-                    div.innerHTML = `
-                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-                            <span style="background:#0284c7; color:#fff; font-size:11px; font-weight:bold; padding:2px 8px; border-radius:4px;">{badge}</span>
-                            <button onclick="document.getElementById('google-ai-pro-guidance').remove()" style="background:transparent; border:none; color:#a1a1aa; cursor:pointer; font-size:16px;">✕</button>
-                        </div>
-                        <div style="font-size:14px; font-weight:bold; margin-bottom:8px; color:#38bdf8;">{title}</div>
-                        <ul style="font-size:12px; line-height:1.4; color:#e4e4e7; margin:0; padding-left:18px;">
-                            {steps_html}
-                        </ul>
-                    `;
-                    if (document.body) {{
-                        document.body.appendChild(div);
-                    }}
-                }} catch (e) {{}}
-            }})();
-            """
-            await page.evaluate(script)
+            asyncio.run(_init_session())
+        except Exception as e:
+            self.emit("WARN", f"Lưu ý khi khởi tạo nhanh tiện ích: {e}")
+
+    async def show_guidance_popup(self, page, badge: str, title: str, steps: list):
+        """Injects a modern, floating in-browser guidance banner using TrustedTypes-safe DOM creation."""
+        try:
+            await page.evaluate(
+                """({badge, title, steps}) => {
+                    try {
+                        let existing = document.getElementById('google-ai-pro-guidance');
+                        if (existing) existing.remove();
+                        let div = document.createElement('div');
+                        div.id = 'google-ai-pro-guidance';
+                        div.style.cssText = 'position:fixed;top:20px;right:20px;max-width:420px;background:#18181b;color:#f4f4f5;padding:16px 20px;border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,0.6);z-index:2147483647;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;border:1px solid #38bdf8;';
+
+                        let hdr = document.createElement('div');
+                        hdr.style.cssText = 'display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;';
+
+                        let bdg = document.createElement('span');
+                        bdg.style.cssText = 'background:#0284c7;color:#fff;font-size:11px;font-weight:bold;padding:2px 8px;border-radius:4px;';
+                        bdg.textContent = badge;
+
+                        let closeBtn = document.createElement('button');
+                        closeBtn.style.cssText = 'background:transparent;border:none;color:#a1a1aa;cursor:pointer;font-size:16px;';
+                        closeBtn.textContent = '✕';
+                        closeBtn.addEventListener('click', () => div.remove());
+
+                        hdr.appendChild(bdg);
+                        hdr.appendChild(closeBtn);
+                        div.appendChild(hdr);
+
+                        let ttl = document.createElement('div');
+                        ttl.style.cssText = 'font-size:14px;font-weight:bold;margin-bottom:8px;color:#38bdf8;';
+                        ttl.textContent = title;
+                        div.appendChild(ttl);
+
+                        let ul = document.createElement('ul');
+                        ul.style.cssText = 'font-size:12px;line-height:1.4;color:#e4e4e7;margin:0;padding-left:18px;';
+                        for (const s of (steps || [])) {
+                            let li = document.createElement('li');
+                            li.style.cssText = 'margin-bottom:6px;';
+                            li.textContent = s;
+                            ul.appendChild(li);
+                        }
+                        div.appendChild(ul);
+
+                        if (document.body) {
+                            document.body.appendChild(div);
+                        }
+                    } catch (e) {}
+                }""",
+                {"badge": badge, "title": title, "steps": steps}
+            )
         except Exception:
             pass
 
@@ -548,30 +624,53 @@ exit
         """Dynamically discovers the loaded Browsec VPN extension ID across Windows/macOS paths."""
         if getattr(self, "_cached_browsec_id", None):
             return self._cached_browsec_id
+        cand_ids = []
         try:
             for p in context.pages:
                 u = p.url or ""
-                if "chrome-extension://" in u and ("browsec" in u.lower() or "installed_compare" in u or "first-start" in u or "popup/popup.html" in u):
+                if "chrome-extension://" in u:
                     cid = u.split("chrome-extension://")[1].split("/")[0]
-                    if len(cid) == 32:
-                        self._cached_browsec_id = cid
-                        return cid
+                    if len(cid) == 32 and cid not in cand_ids:
+                        cand_ids.append(cid)
             cdp = await context.browser.new_browser_cdp_session()
             try:
                 await cdp.send("Target.setDiscoverTargets", {"discover": True})
                 res = await cdp.send("Target.getTargets")
                 for t in res.get("targetInfos", []):
                     url = t.get("url", "")
-                    if "chrome-extension://" in url and ("background.js" in url or "popup/popup.html" in url or "browsec" in url.lower()):
+                    if "chrome-extension://" in url:
                         cid = url.split("chrome-extension://")[1].split("/")[0]
-                        if len(cid) == 32 and cid not in ("ndcpkimcihhghdcddljkfmmjccdmcmof", "ihmafllikibpmigkcoadcmckbfhibefp", "nkeimhogjdpnpccoofpliimaahmaaome"):
-                            self._cached_browsec_id = cid
-                            return cid
+                        if len(cid) == 32 and cid not in cand_ids:
+                            cand_ids.append(cid)
             finally:
                 try:
                     await cdp.detach()
                 except Exception:
                     pass
+
+            if cand_ids:
+                pop = await context.new_page()
+                try:
+                    for cid in cand_ids:
+                        try:
+                            await pop.goto(f"chrome-extension://{cid}/popup/popup.html", wait_until="domcontentloaded", timeout=3500)
+                            is_browsec = await pop.evaluate("""() => {
+                                try {
+                                    const m = chrome.runtime.getManifest();
+                                    if (m && m.name && m.name.toLowerCase().includes("browsec")) return true;
+                                } catch (e) {}
+                                return !!(document.querySelector("page-switch") || document.querySelector("first-start-agree-terms-conditions") || document.title.toLowerCase().includes("browsec"));
+                            }""")
+                            if is_browsec:
+                                self._cached_browsec_id = cid
+                                return cid
+                        except Exception:
+                            continue
+                finally:
+                    try:
+                        await pop.close()
+                    except Exception:
+                        pass
         except Exception:
             pass
         return getattr(self, "_cached_browsec_id", None) or "idpcbofefmfbbabefbkldkdgjffphfgo"
@@ -597,7 +696,7 @@ exit
             try:
                 for ext_id in cand_ids:
                     try:
-                        await pop.goto(f"chrome-extension://{ext_id}/popup/popup.html", timeout=3500)
+                        await pop.goto(f"chrome-extension://{ext_id}/popup/popup.html", wait_until="domcontentloaded", timeout=3500)
                         res = await pop.evaluate("""new Promise(resolve => {
                             if (!chrome.proxy || !chrome.proxy.settings) return resolve(false);
                             chrome.proxy.settings.get({}, (cfg) => {
@@ -779,32 +878,85 @@ exit
                     return final_email
             await asyncio.sleep(0.8)
 
+        # Close any stray extension onboarding tabs (e.g. Browsec congratulations.html) if another tab exists
+        for p in list(page.context.pages):
+            u = (p.url or "").lower()
+            if u.startswith("chrome-extension://") and len(page.context.pages) > 1:
+                try:
+                    await p.close()
+                except Exception:
+                    pass
+
+        # Ensure the main visible tab is navigated to Google Sign-In (never stuck on about:blank or newtab)
+        login_url = "https://accounts.google.com/ServiceLogin?hl=vi&continue=https%3A%2F%2Fone.google.com%2Fplans%3Fhl%3Dvi"
+        if page.is_closed() and page.context.pages:
+            page = page.context.pages[0]
+        cur_u = (page.url or "").lower()
+        if not any(d in cur_u for d in ("accounts.google.com", "one.google.com", "myaccount.google.com", "play.google.com")):
+            try:
+                await page.goto(login_url, wait_until="domcontentloaded", timeout=30000)
+                await asyncio.sleep(1.0)
+            except Exception:
+                pass
+        try:
+            await page.bring_to_front()
+        except Exception:
+            pass
+
+        # Re-check once after navigating to login_url in case cookies auto-authenticated to one.google.com
+        for p in page.context.pages:
+            email = await detect_auth(p)
+            if email:
+                final_email = email if "@" in email else (cfg_email or "user@gmail.com")
+                self.emit("INFO", f"Already authenticated as: {final_email}")
+                self._update_account_email(final_email)
+                return final_email
+
         # Halt and wait for login
         self.emit("HALT_LOGIN", f"Chờ đăng nhập Google trên trình duyệt cho [{self.account_id}]...")
+        guidance_steps = [
+            "Nhập địa chỉ email và mật khẩu tài khoản Google của bạn.",
+            "Hoàn tất các bước xác minh bảo mật hoặc 2FA (nếu có).",
+            "Sau khi đăng nhập thành công, hệ thống sẽ tự động phát hiện và tiếp tục!"
+        ]
         for p in page.context.pages:
-            await self.show_guidance_popup(
-                p,
-                badge="BƯỚC 1: ĐĂNG NHẬP GOOGLE",
-                title="Vui lòng đăng nhập tài khoản Google cần nâng cấp",
-                steps=[
-                    "Nhập địa chỉ email và mật khẩu tài khoản Google của bạn.",
-                    "Hoàn tất các bước xác minh bảo mật hoặc 2FA (nếu có).",
-                    "Sau khi đăng nhập thành công, hệ thống sẽ tự động phát hiện và tiếp tục!"
-                ]
-            )
+            u = (p.url or "").lower()
+            if "chrome-extension://" not in u:
+                await self.show_guidance_popup(
+                    p,
+                    badge="BƯỚC 1: ĐĂNG NHẬP GOOGLE",
+                    title="Vui lòng đăng nhập tài khoản Google cần nâng cấp",
+                    steps=guidance_steps
+                )
         detected_email = ""
         max_wait = 360 # 6 minutes max
         start_ts = time.time()
         
         while not self.stop_requested and (time.time() - start_ts < max_wait):
             await asyncio.sleep(1.8)
-            for p in page.context.pages:
+            has_google_tab = False
+            for p in list(page.context.pages):
+                u = (p.url or "").lower()
+                if "google.com" in u:
+                    has_google_tab = True
                 email = await detect_auth(p)
                 if email:
                     detected_email = email if "@" in email else (cfg_email or "user@gmail.com")
                     break
             if detected_email:
                 break
+            if not has_google_tab and page.context.pages:
+                target_p = page.context.pages[0]
+                try:
+                    await target_p.goto(login_url, wait_until="domcontentloaded", timeout=25000)
+                    await self.show_guidance_popup(
+                        target_p,
+                        badge="BƯỚC 1: ĐĂNG NHẬP GOOGLE",
+                        title="Vui lòng đăng nhập tài khoản Google cần nâng cấp",
+                        steps=guidance_steps
+                    )
+                except Exception:
+                    pass
 
         if detected_email:
             self.emit("RESUME_LOGIN", f"Đăng nhập thành công tài khoản: {detected_email}! Tự động tiếp tục...")
@@ -1097,16 +1249,27 @@ exit
                 use_vpn=True
             )
 
-            # Checkpoint 1: Halt at Login (Done over direct fast connection, preventing proxy ERR_TIMED_OUT)
+            # Pre-initialize Browsec VPN (accept Terms of Service & switch to US node) immediately so Browsec is ready from Step 1
+            self.emit("STAGE", "Đang khởi tạo tiện ích Browsec VPN (Chấp nhận điều khoản & kết nối máy chủ Hoa Kỳ)...")
+            await automator.activate_vpn_to_us(browser, context, page)
+
+            # Select primary non-extension tab and ensure it is navigated to Google Login if still on about:blank
+            valid_pages = [p for p in context.pages if not (p.url or "").startswith("chrome-extension://")]
+            page = valid_pages[0] if valid_pages else (context.pages[0] if context.pages else await context.new_page())
+            await page.set_viewport_size({"width": 1400, "height": 950})
+
+            # Checkpoint 1: Halt at Login (Ensures Google Login page is loaded, never about:blank)
             email = await self.check_and_handle_login(page)
             if not email or self.stop_requested:
                 self.emit("ERROR", "Login was not completed within the timeout period.")
                 return
 
-            # Checkpoint 2: Connect Browsec US VPN
-            self.emit("STAGE", "Connecting Browsec US VPN...")
-            await automator.activate_vpn_to_us(browser, context, page)
-            page = context.pages[0] if context.pages else await context.new_page()
+            # Checkpoint 2: Verify / Re-ensure Browsec US VPN connection after login
+            if not await self.probe_browsec_vpn_status(context):
+                self.emit("STAGE", "Connecting Browsec US VPN...")
+                await automator.activate_vpn_to_us(browser, context, page)
+            valid_pages = [p for p in context.pages if not (p.url or "").startswith("chrome-extension://")]
+            page = valid_pages[0] if valid_pages else (context.pages[0] if context.pages else await context.new_page())
 
             # Reload Google One under the newly connected US VPN tunnel so US$ pricing loads instead of cached VN pricing
             self.emit("INFO", "🇺🇸 Đang tải lại trang Google One qua máy chủ Hoa Kỳ (US) để kích hoạt bảng giá US$0.00...")

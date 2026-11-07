@@ -1113,9 +1113,9 @@ class UniversalStackerApp(ctk.CTk):
 
     def _cmd_launch_signin(self):
         self.append_log("STAGE", f"Đang khởi tạo trình duyệt hiển thị trên màn hình cho [{self.active_account_id}]...")
-        self.set_checkpoint_status("running", "🌐 Đang mở trình duyệt", "Trình duyệt đang khởi động trên màn hình của bạn...")
+        self.set_checkpoint_status("running", "🌐 Đang mở trình duyệt & khởi tạo Browsec VPN", "Trình duyệt đang mở trang Đăng nhập Google và tự động kích hoạt Browsec VPN (US)...")
         eng = engine_stacker.StackingEngine(self.active_account_id, on_event=self._on_engine_event)
-        threading.Thread(target=eng.launch_visible_edge, daemon=True).start()
+        threading.Thread(target=eng.launch_and_prepare_signin, daemon=True).start()
 
     def _cmd_stop(self):
         self.append_log("WARN", "🛑 Đang gửi yêu cầu dừng tiến trình...")
