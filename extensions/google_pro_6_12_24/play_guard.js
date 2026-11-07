@@ -44,26 +44,60 @@
       return;
     }
     if (!t || t.length < 5) return;
-    const free = FREE_WORDS.some((w) => t.includes(w.toLowerCase()));
-    const paid = PAID_WORDS.some((w) => t.includes(w.toLowerCase()));
 
-    if (free && !paid) {
-      paint("ok", "✅ ĐÃ XÁC NHẬN MIỄN PHÍ ($0.00) —— Cửa sổ an toàn để bấm Đăng ký (Hãy đối chiếu lại số tiền)");
-    } else if (paid && !free) {
-      paint("bad", "❌ CẢNH BÁO: Phát hiện có tính phí! DỪNG LẠI không nhấn đăng ký —— Hãy kiểm tra lại tầng!");
-    } else if (free && paid) {
-      paint("warn", "⚠️ Lưu ý: Điều khoản xuất hiện cả miễn phí và tính phí —— Vui lòng kiểm tra kỹ số tiền $0.00 trước khi bấm!");
-    } else {
-      paint("warn", "… Đang kiểm tra điều khoản giá gói...");
+    // 1. Success state: subscription confirmed / Play Points dialog
+    if (
+      t.includes("nhận điểm google play") ||
+      t.includes("sau khi đăng ký") ||
+      t.includes("đã đăng ký") ||
+      t.includes("cảm ơn bạn đã đăng ký") ||
+      t.includes("google play points") ||
+      t.includes("subscribed") ||
+      t.includes("thank you for your order") ||
+      t.includes("已订阅") ||
+      t.includes("感谢您订阅")
+    ) {
+      paint("ok", "✅ ĐÃ KÍCH HOẠT THÀNH CÔNG GÓI $0.00! Bấm [Để sau] để tiếp tục...");
+      return;
     }
+
+    // 2. Explicit charge today
+    const paid = PAID_WORDS.some((w) => t.includes(w.toLowerCase()));
+    if (paid) {
+      paint("bad", "❌ CẢNH BÁO: Phát hiện có tính phí hôm nay! DỪNG LẠI không nhấn đăng ký!");
+      return;
+    }
+
+    // 3. Layer 1, Layer 2 (Samsung +6M), and Layer 3 (Pixel +6M) Zero-Cost Verification
+    const hasFreeSignal = FREE_WORDS.some((w) => t.includes(w.toLowerCase())) ||
+      t.includes("0,00") || t.includes("0.00") || t.includes("0 đ") || t.includes("0đ") ||
+      t.includes("các khoản phí sắp tới") || t.includes("ngày bắt đầu:") ||
+      t.includes("upcoming charges") || t.includes("starting on") ||
+      t.includes("即将收取的费用") || t.includes("开始日期") ||
+      t.includes("dùng thử miễn phí") || t.includes("miễn phí");
+
+    if (hasFreeSignal) {
+      paint("ok", "✅ ĐÃ XÁC NHẬN MIỄN PHÍ ($0.00) —— Cửa sổ an toàn để bấm Đăng ký (Tầng 1/2/3 24 Tháng)");
+      return;
+    }
+
+    paint("warn", "… Đang kiểm tra điều khoản giá gói...");
   }
 
-  setTimeout(judge, 1200);
-  setTimeout(judge, 3000);
-  setTimeout(judge, 6000);
+  judge();
+  setTimeout(judge, 400);
+  setTimeout(judge, 1000);
+  setTimeout(judge, 2000);
+  setInterval(judge, 800);
   try {
     let _t = null;
-    const mo = new MutationObserver(() => { if (_t) clearTimeout(_t); _t = setTimeout(judge, 300); });
-    setInterval(judge, 1200); if (document.body) mo.observe(document.body, { childList: true, subtree: true }); else document.addEventListener("DOMContentLoaded", () => { if (document.body) mo.observe(document.body, { childList: true, subtree: true }); });
+    const mo = new MutationObserver(() => { if (_t) clearTimeout(_t); _t = setTimeout(judge, 150); });
+    if (document.body) {
+      mo.observe(document.body, { childList: true, subtree: true });
+    }
+    document.addEventListener("DOMContentLoaded", () => {
+      if (document.body) mo.observe(document.body, { childList: true, subtree: true });
+      judge();
+    });
   } catch (e) {}
 })();
