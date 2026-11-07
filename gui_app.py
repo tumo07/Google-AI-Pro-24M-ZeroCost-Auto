@@ -1080,7 +1080,10 @@ class UniversalStackerApp(ctk.CTk):
             elif "Việt Nam" in message:
                 self.after(0, self.set_progress, 0.95)
                 self.after(0, self._highlight_step, 4)
-        elif event_type in ["COMPLETED", "SUCCESS"]:
+        elif event_type == "SUCCESS":
+            self.after(0, self.set_checkpoint_status, "running", "🟢 Tiến trình thành công", message)
+            self.after(0, self._refresh_accounts)
+        elif event_type == "COMPLETED":
             self.after(0, self.set_checkpoint_status, "success", "🎉 Hoàn Tất 24 Tháng Google AI Pro 5 TB!", "Đã hoàn tất cộng dồn đủ 24 tháng, hủy phí gia hạn định kỳ và gỡ thẻ thành công.")
             self.after(0, self.set_progress, 1.0)
             self.after(0, self._highlight_step, 4)
@@ -1099,6 +1102,7 @@ class UniversalStackerApp(ctk.CTk):
         def _worker():
             try:
                 eng = engine_stacker.StackingEngine(self.active_account_id, on_event=self._on_engine_event)
+                self.engine = eng
                 eng.run_staging_environment()
             except Exception as e:
                 self._on_engine_event("ERROR", f"Lỗi Staging: {e}")
@@ -1166,6 +1170,7 @@ class UniversalStackerApp(ctk.CTk):
         def _worker():
             try:
                 eng = engine_stacker.StackingEngine(self.active_account_id, on_event=self._on_engine_event)
+                self.engine = eng
                 eng.launch_visible_edge("https://play.google.com/store/account/subscriptions?hl=vi", reuse_if_open=True)
                 time.sleep(2.5)
                 async def _sub_cancel():
@@ -1192,6 +1197,7 @@ class UniversalStackerApp(ctk.CTk):
         def _worker():
             try:
                 eng = engine_stacker.StackingEngine(self.active_account_id, on_event=self._on_engine_event)
+                self.engine = eng
                 eng.launch_visible_edge("https://play.google.com/store/paymentmethods?hl=vi", reuse_if_open=True)
                 time.sleep(2.5)
                 async def _sub_remove():

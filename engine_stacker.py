@@ -153,6 +153,7 @@ class StackingEngine:
         self.port = 9320
         self.profile_dir = os.path.join(BASE_DIR, "profiles", f"profile_{account_id.lower()}")
         self.stop_requested = False
+        self.automator = None
         self.cfg = self._load_config()
         self.account = self._get_account_data()
         self.card = self.cfg.get("card", {})
@@ -196,6 +197,8 @@ class StackingEngine:
     def stop(self):
         """Immediately halts automation loops."""
         self.stop_requested = True
+        if hasattr(self, "automator") and self.automator:
+            self.automator.stop_requested = True
         self.emit("WARN", "🛑 Đã nhận yêu cầu dừng từ người dùng.")
 
     def _is_cdp_ready(self, require_page: bool = False) -> bool:
@@ -953,8 +956,12 @@ exit
         Guarantees that YouTube Premium ($11.99) is NEVER charged,
         while locking in Google AI Pro (5 TB) for full 24 months ($0.00).
         """
+        if self.stop_requested:
+            return False
         self.emit("STAGE", "🛡️ Đang hủy gia hạn tự động trên Google Play (Bảo lưu 24T & Triệt tiêu phí phát sinh)...")
         await page.goto("https://play.google.com/store/account/subscriptions?hl=vi", wait_until="domcontentloaded", timeout=30000)
+        if self.stop_requested:
+            return False
         await asyncio.sleep(4.0)
 
         # Click Manage / Quản lý
@@ -1011,8 +1018,12 @@ exit
         POST-STACKING STEP: Unlink all payment cards from Google Payments / Play Store.
         Completely eliminates any possibility of future billing or recurring charges.
         """
+        if self.stop_requested:
+            return False
         self.emit("STAGE", "💳 Bắt đầu quy trình gỡ bỏ thẻ thanh toán (Triệt tiêu rủi ro phát sinh phí)...")
         try:
+            if self.stop_requested:
+                return False
             # 1. Show in-browser guidance popup
             await self.show_guidance_popup(
                 page,
@@ -1082,8 +1093,12 @@ exit
         POST-STACKING STEP: Change billing profile back to Vietnam (VN)
         Enables Google One Family Sharing for members located in Vietnam.
         """
+        if self.stop_requested:
+            return False
         self.emit("STAGE", "🇻🇳 Transitioning billing region back to Vietnam for Family Sharing...")
         try:
+            if self.stop_requested:
+                return False
             await page.goto("https://payments.google.com/gp/w/u/0/home/settings?hl=vi", wait_until="domcontentloaded", timeout=30000)
             await asyncio.sleep(4.0)
             
@@ -1212,6 +1227,7 @@ exit
                 on_log=lambda m: self.emit("ENGINE", m),
                 use_vpn=True
             )
+            self.automator = automator
 
             # Pre-initialize Browsec VPN (accept Terms of Service & switch to US node) immediately so Browsec is ready from Step 1
             self.emit("STAGE", "Đang khởi tạo tiện ích Browsec VPN (Chấp nhận điều khoản & kết nối máy chủ Hoa Kỳ)...")
@@ -1272,7 +1288,10 @@ exit
                 if self.stop_requested:
                     return
                 ok1 = await automator.step2_layer1_12m(page)
-                await asyncio.sleep(10.0)
+                if not ok1 or self.stop_requested:
+                    self.emit("ERROR", "❌ Kích hoạt Tầng 1 (12 Tháng Base) thất bại hoặc đã bị dừng!")
+                    return
+                await asyncio.sleep(8.0)
             else:
                 self.emit("INFO", "Base Google One subscription already active on account.")
 
@@ -1302,8 +1321,11 @@ exit
             if not ok2 and not self.stop_requested:
                 self.emit("WARN", "Retrying Layer 2 in 4 seconds...")
                 await asyncio.sleep(4.0)
-                await automator.open_and_click_subscribe(page, cfg_l2, "step3_layer2_6mss")
-            await asyncio.sleep(10.0)
+                ok2 = await automator.open_and_click_subscribe(page, cfg_l2, "step3_layer2_6mss")
+            if not ok2 or self.stop_requested:
+                self.emit("ERROR", "❌ Kích hoạt Tầng 2 (+6 Tháng Samsung) thất bại hoặc đã bị dừng!")
+                return
+            await asyncio.sleep(8.0)
 
             if self.stop_requested:
                 return
@@ -1335,27 +1357,43 @@ exit
                 if ok3:
                     break
                 await asyncio.sleep(3.0)
+            if not ok3 or self.stop_requested:
+                self.emit("ERROR", "❌ Kích hoạt Tầng 3 (+6 Tháng Pixel) thất bại hoặc đã bị dừng!")
+                return
             await asyncio.sleep(8.0)
 
             if self.stop_requested:
                 return
 
             # Verify 2028 expiration on Google Play before canceling or removing linked cards
+            self.emit("STAGE", "🔍 Đang xác minh hạn gói trên Google Play đạt mốc năm 2028...")
             verify_txt = await automator.inspect_play_subscriptions(page)
             if "2028" not in verify_txt:
-                self.emit("WARN", "⚠️ Phát hiện hạn gói trên Google Play chưa lên năm 2028 (vẫn đang ở 2027). Đang giữ nguyên thẻ thanh toán để bạn kiểm tra hoặc chạy lại Tầng 2/3!")
+                self.emit("WARN", f"⚠️ CẢNH BÁO: Hạn gói trên Google Play chưa đạt mốc năm 2028 (nội dung: {verify_txt[:100]}). GIỮ NGUYÊN THẺ THANH TOÁN và bảo lưu đăng ký để bạn kiểm tra!")
                 return
 
+            self.emit("SUCCESS", "✅ Đã xác minh thành công: Gói dịch vụ đã được cộng dồn trọn vẹn đến năm 2028!")
+
             # Checkpoint 7: Cancel Auto-Renewal to eliminate YouTube Premium $11.99 charge
-            await self.cancel_youtube_and_lock_2028(page)
+            if not self.stop_requested:
+                await self.cancel_youtube_and_lock_2028(page)
+
+            if self.stop_requested:
+                return
 
             # Checkpoint 8: Switch billing region back to Vietnam for Family Sharing
             if auto_switch_vn and not self.stop_requested:
                 await self.switch_billing_region_to_vietnam(page)
 
+            if self.stop_requested:
+                return
+
             # Checkpoint 9: Remove all linked payment cards to avoid future billing
             if auto_remove_cards and not self.stop_requested:
                 await self.remove_all_linked_cards(page)
+
+            if self.stop_requested:
+                return
 
             self.emit("COMPLETED", f"🎉 HOÀN TẤT THÀNH CÔNG! Tài khoản {email} đã được cộng dồn trọn vẹn 24 Tháng Google AI Pro (5 TB) với giá $0.00, đã hủy gia hạn định kỳ và gỡ sạch thẻ an toàn!")
 

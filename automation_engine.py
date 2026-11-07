@@ -1429,13 +1429,26 @@ class GoogleUltraAutomator:
             return None, "INLINE_CARD_SAVED_RETRY"
         return None, ""
 
-    async def open_and_click_subscribe(self, page, cfg: Dict[str, Any], step_tag: str, expect_keywords: Optional[list] = None) -> bool:
+    async def open_and_click_subscribe(self, page, cfg: Dict[str, Any], step_tag: str, expect_keywords: Optional[list] = None, target_urls: Optional[list] = None) -> bool:
         self.last_subscribe_error = ""
         target_fr = None
         clean_txt = ""
 
-        # Primary trigger: one.google.com/plans?hl=vi&gl=US clicking the LAST action button (proven 100% reliable across L1, L2, L3)
-        for attempt_url in ("https://one.google.com/plans?hl=vi&gl=US",) * 5:
+        if target_urls is None:
+            if "step3" in step_tag.lower() or "step4" in step_tag.lower():
+                target_urls = [
+                    "https://one.google.com/settings?expand=upgrade&hl=vi&gl=US",
+                    "https://one.google.com/ai-nye?g1_landing_page=0&hl=vi",
+                    "https://one.google.com/plans?hl=vi&gl=US",
+                ]
+            else:
+                target_urls = ["https://one.google.com/plans?hl=vi&gl=US"]
+
+        # Primary trigger: Google One plans/settings clicking the LAST action button (proven 100% reliable across L1, L2, L3)
+        for attempt_url in target_urls:
+            if self.stop_requested:
+                self.log(f"🛑 [{step_tag}] Dừng tác vụ do người dùng yêu cầu.")
+                return False
             if target_fr:
                 break
             self.log(f"[{step_tag}] Đang mở trang gói Google One kích hoạt thanh toán 0đ: {attempt_url}")
@@ -1451,7 +1464,11 @@ class GoogleUltraAutomator:
                 await self.safe_goto(page, attempt_url, timeout=40000)
                 await asyncio.sleep(3.5)
 
+            if self.stop_requested:
+                return False
             for _init_ev in range(3):
+                if self.stop_requested:
+                    return False
                 try:
                     await page.evaluate(HOOK_JS)
                     await page.evaluate(f"window.__setDirectTest({json.dumps(cfg)})")
@@ -1473,12 +1490,19 @@ class GoogleUltraAutomator:
                     const btns = els.filter(e => {
                         const t = (e.innerText || '').trim();
                         const r = e.getBoundingClientRect();
-                        return r.width > 15 && r.height > 15 && r.left >= 240 && (
+                        const minLeft = (location.href.includes('settings') || location.href.includes('ai-nye')) ? 10 : 80;
+                        return r.width > 15 && r.height > 15 && r.left >= minLeft && (
                             t.includes('Bắt đầu') ||
                             t.includes('Bắt đầu sử dụng') ||
                             t.includes('Bắt đầu dùng thử') ||
                             t.includes('Nhận ưu đãi') ||
+                            t.includes('Nhận chiết khấu') ||
+                            t.includes('Get discount') ||
                             t.includes('Chuyển sang gói') ||
+                            t.includes('Chuyển sang gói này') ||
+                            t.includes('Chuyển đổi') ||
+                            t.includes('Đổi gói') ||
+                            t.includes('Nâng cấp gói') ||
                             t === 'Nâng cấp' ||
                             t === 'Upgrade' ||
                             t.includes('Get started') ||
@@ -1592,18 +1616,18 @@ class GoogleUltraAutomator:
                 for i in range(bcnt - 1, -1, -1):
                     b = all_btns.nth(i)
                     btxt = (await b.inner_text()).strip()
-                    if btxt in ("Đăng ký", "Đăng ký thuê bao", "Subscribe", "订阅", "Nâng cấp"):
+                    if any(k in btxt for k in ("Đăng ký", "Đăng ký thuê bao", "Subscribe", "订阅", "Nâng cấp")):
                         self.log(f"--> Đang bấm nút [{step_tag}] 【{btxt}】...")
                         try:
                             await b.scroll_into_view_if_needed(timeout=2000)
                         except Exception:
                             pass
                         try:
-                            await b.click(timeout=4000)
+                            await b.click(timeout=3000)
                             did_click = True
                         except Exception:
                             try:
-                                await b.click(force=True, timeout=4000)
+                                await b.click(force=True, timeout=3000)
                                 did_click = True
                             except Exception:
                                 pass
@@ -1616,14 +1640,17 @@ class GoogleUltraAutomator:
                     const btns = Array.from(document.querySelectorAll('button, [role="button"]'));
                     for (let i = btns.length - 1; i >= 0; i--) {
                         const sub = btns[i];
-                        const bt = (sub.innerText || '').trim();
-                        if (['Đăng ký', 'Đăng ký thuê bao', 'Subscribe', '订阅', 'Nâng cấp'].includes(bt)) {
+                        const bt = (sub.innerText || sub.textContent || '').trim();
+                        if (['Đăng ký', 'Đăng ký thuê bao', 'Subscribe', '订阅', 'Nâng cấp'].some(k => bt.includes(k))) {
+                            sub.scrollIntoView({block: 'center'});
                             sub.focus();
-                            sub.dispatchEvent(new PointerEvent('pointerdown', {bubbles: true, cancelable: true}));
-                            sub.dispatchEvent(new MouseEvent('mousedown', {bubbles: true, cancelable: true}));
-                            sub.dispatchEvent(new PointerEvent('pointerup', {bubbles: true, cancelable: true}));
-                            sub.dispatchEvent(new MouseEvent('mouseup', {bubbles: true, cancelable: true}));
-                            sub.dispatchEvent(new MouseEvent('click', {bubbles: true, cancelable: true}));
+                            const rect = sub.getBoundingClientRect();
+                            const evtOpts = {bubbles: true, cancelable: true, view: window, clientX: rect.left + rect.width / 2, clientY: rect.top + rect.height / 2};
+                            sub.dispatchEvent(new PointerEvent('pointerdown', evtOpts));
+                            sub.dispatchEvent(new MouseEvent('mousedown', evtOpts));
+                            sub.dispatchEvent(new PointerEvent('pointerup', evtOpts));
+                            sub.dispatchEvent(new MouseEvent('mouseup', evtOpts));
+                            sub.dispatchEvent(new MouseEvent('click', evtOpts));
                             sub.click();
                             return true;
                         }
@@ -1648,7 +1675,12 @@ class GoogleUltraAutomator:
         acct_pwd = self.account.get("password", "")
         post_click_err = None
         for wait_i in range(35):
+            if self.stop_requested:
+                self.log(f"🛑 [{step_tag}] Đã nhận yêu cầu dừng từ người dùng.")
+                return False
             await asyncio.sleep(2)
+            if self.stop_requested:
+                return False
             if len(page.context.pages) > 1:
                 await self.pass_reauth_on_page(page.context.pages[-1])
 
@@ -1794,7 +1826,8 @@ class GoogleUltraAutomator:
                             except Exception:
                                 await asyncio.sleep(2.5)
                             return True
-                        elif "eacquire" in f2_url and wait_i in (2, 5, 9) and not reauth_spinning:
+                        elif "eacquire" in f2_url and wait_i in (2, 5, 8, 12, 16) and not reauth_spinning:
+                            self.log(f"[{step_tag}] Đang thử gửi lại lệnh bấm Đăng ký (lần {wait_i})...")
                             await _trigger_subscribe_btn(f2)
                         err_keywords = [
                             "出了点问题",

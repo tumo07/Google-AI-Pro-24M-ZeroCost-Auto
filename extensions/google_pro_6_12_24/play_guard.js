@@ -6,8 +6,40 @@
  * Licensed under the MIT License.
  */
 (() => {
-  if (window.__GAPT_GUARD || window.top === window || (!location.href.includes("eacquire") && !location.href.includes("tokenized.play.google.com")) || location.href.includes("instrumentmanager")) return; // Only run inside Play iframe
+  if (window.__GAPT_GUARD) return;
   window.__GAPT_GUARD = true;
+
+  let bar = null;
+  function paint(kind, text) {
+    if (!document.body) return;
+    if (!bar) {
+      bar = document.createElement("div");
+      bar.style.cssText = "position:fixed;left:0;right:0;top:0;z-index:2147483647;padding:10px 14px;" +
+        "font:13px/1.5 -apple-system,Segoe UI,Roboto,'Segoe UI',sans-serif;text-align:center;font-weight:600;pointer-events:none;";
+      document.body.appendChild(bar);
+    }
+    if (bar.textContent === text && bar.dataset.kind === kind) return;
+    bar.dataset.kind = kind;
+    bar.style.background = kind === "ok" ? "#1a7f37" : (kind === "bad" ? "#c62828" : "#616161");
+    bar.style.color = "#fff";
+    bar.textContent = text;
+    try {
+      if (window.top !== window) {
+        window.top.postMessage({ __GAPT_GUARD_STATUS: true, kind: kind, text: text }, "*");
+      }
+    } catch (e) {}
+  }
+
+  if (window.top === window) {
+    window.addEventListener("message", (ev) => {
+      if (ev.data && ev.data.__GAPT_GUARD_STATUS) {
+        paint(ev.data.kind, ev.data.text);
+      }
+    });
+    return;
+  }
+
+  if ((!location.href.includes("eacquire") && !location.href.includes("tokenized.play.google.com")) || location.href.includes("instrumentmanager")) return;
 
   const FREE_WORDS = [
     "free trial", "start your free trial", "dùng thử miễn phí", "bắt đầu dùng thử miễn phí",
@@ -20,21 +52,7 @@
     "charged today", "charge today"
   ];
 
-  let bar = null;
-  function paint(kind, text) {
-    if (!document.body) return;
-    if (!bar) {
-      bar = document.createElement("div");
-      bar.style.cssText = "position:fixed;left:0;right:0;top:0;z-index:2147483647;padding:10px 14px;" +
-        "font:13px/1.5 -apple-system,Segoe UI,Roboto,'Segoe UI',sans-serif;text-align:center;font-weight:600;";
-      document.body.appendChild(bar);
-    }
-    if (bar.textContent === text && bar.dataset.kind === kind) return;
-    bar.dataset.kind = kind;
-    bar.style.background = kind === "ok" ? "#1a7f37" : (kind === "bad" ? "#c62828" : "#616161");
-    bar.style.color = "#fff";
-    bar.textContent = text;
-  }
+
 
   function judge() {
     let t = "";
