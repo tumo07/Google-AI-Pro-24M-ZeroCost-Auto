@@ -1217,9 +1217,14 @@ exit
             self.emit("STAGE", "Đang khởi tạo tiện ích Browsec VPN (Chấp nhận điều khoản & kết nối máy chủ Hoa Kỳ)...")
             await automator.activate_vpn_to_us(browser, context, page)
 
-            # Select primary non-extension tab and ensure it is navigated to Google Login if still on about:blank
+            # Select primary non-extension tab and close any duplicate background tabs
             valid_pages = [p for p in context.pages if not (p.url or "").startswith("chrome-extension://")]
             page = valid_pages[0] if valid_pages else (context.pages[0] if context.pages else await context.new_page())
+            for extra_p in valid_pages[1:]:
+                try:
+                    await extra_p.close()
+                except Exception:
+                    pass
             await page.set_viewport_size({"width": 1400, "height": 950})
 
             # Checkpoint 1: Halt at Login (Ensures Google Login page is loaded, never about:blank)
@@ -1234,6 +1239,11 @@ exit
                 await automator.activate_vpn_to_us(browser, context, page)
             valid_pages = [p for p in context.pages if not (p.url or "").startswith("chrome-extension://")]
             page = valid_pages[0] if valid_pages else (context.pages[0] if context.pages else await context.new_page())
+            for extra_p in valid_pages[1:]:
+                try:
+                    await extra_p.close()
+                except Exception:
+                    pass
 
             # Reload Google One under the newly connected US VPN tunnel so US$ pricing loads instead of cached VN pricing
             self.emit("INFO", "🇺🇸 Đang tải lại trang Google One qua máy chủ Hoa Kỳ (US) để kích hoạt bảng giá US$0.00...")
@@ -1309,22 +1319,31 @@ exit
                 return
 
             sub_id_3 = await automator.get_current_sub_id(page)
-            cfg_l3 = {
-                "name": "Step4_Layer3_6M_Pixel_ZeroCost",
-                "full_items": [
-                    [[automation_engine.PREFIX + "g1.2tb.ai.subs_variant", 21], None, None, None, 1, [automation_engine.TOK_PRO5TB_6M]],
-                    [[automation_engine.PREFIX + "g1.youtube_premium_individual_add_on", 21], None, None, None, 1, [automation_engine.YT_FREE_TOK]],
-                ],
-                "ear8": [None, 5, None, None, None, [sub_id_3]] if sub_id_3 else None,
-            }
-            ok3 = await automator.open_and_click_subscribe(page, cfg_l3, "step4_layer3_6m")
-            if not ok3 and not self.stop_requested:
-                self.emit("WARN", "Retrying Layer 3 in 4 seconds...")
-                await asyncio.sleep(4.0)
-                await automator.open_and_click_subscribe(page, cfg_l3, "step4_layer3_6m")
-            await asyncio.sleep(10.0)
+            ok3 = False
+            for tok_3 in (automation_engine.TOK_PRO5TB_6M, automation_engine.TOK_PRO5TB_6M_2):
+                if self.stop_requested:
+                    return
+                cfg_l3 = {
+                    "name": "Step4_Layer3_6M_Pixel_ZeroCost",
+                    "full_items": [
+                        [[automation_engine.PREFIX + "g1.2tb.ai.subs_variant", 21], None, None, None, 1, [tok_3]],
+                        [[automation_engine.PREFIX + "g1.youtube_premium_individual_add_on", 21], None, None, None, 1, [automation_engine.YT_FREE_TOK]],
+                    ],
+                    "ear8": [None, 5, None, None, None, [sub_id_3]] if sub_id_3 else None,
+                }
+                ok3 = await automator.open_and_click_subscribe(page, cfg_l3, "step4_layer3_6m")
+                if ok3:
+                    break
+                await asyncio.sleep(3.0)
+            await asyncio.sleep(8.0)
 
             if self.stop_requested:
+                return
+
+            # Verify 2028 expiration on Google Play before canceling or removing linked cards
+            verify_txt = await automator.inspect_play_subscriptions(page)
+            if "2028" not in verify_txt:
+                self.emit("WARN", "⚠️ Phát hiện hạn gói trên Google Play chưa lên năm 2028 (vẫn đang ở 2027). Đang giữ nguyên thẻ thanh toán để bạn kiểm tra hoặc chạy lại Tầng 2/3!")
                 return
 
             # Checkpoint 7: Cancel Auto-Renewal to eliminate YouTube Premium $11.99 charge

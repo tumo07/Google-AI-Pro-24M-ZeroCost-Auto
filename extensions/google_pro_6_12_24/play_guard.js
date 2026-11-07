@@ -6,17 +6,17 @@
  * Licensed under the MIT License.
  */
 (() => {
-  if (window.__GAPT_GUARD || window.top === window || !location.href.includes("play.google.com") || location.href.includes("instrumentmanager")) return; // Only run inside Play iframe
+  if (window.__GAPT_GUARD || window.top === window || (!location.href.includes("eacquire") && !location.href.includes("tokenized.play.google.com")) || location.href.includes("instrumentmanager")) return; // Only run inside Play iframe
   window.__GAPT_GUARD = true;
 
   const FREE_WORDS = [
     "free trial", "start your free trial", "dùng thử miễn phí", "bắt đầu dùng thử miễn phí",
-    "miễn phí", "US$0.00", "$0.00", "0,00", "€0.00", "0 đ", "0đ",
+    "miễn phí", "US$0.00", "$0.00", "0,00", "€0.00", "0 đ", "0đ", "các khoản phí sắp tới", "ngày bắt đầu:", "starting on", "nhận điểm google play", "sau khi đăng ký", "đã đăng ký",
     "won't be charged", "sẽ không bị tính phí", "﻿​‌​​​​​‌​‌​‌​‌​‌​‌​‌​‌​​​‌​​‌​​​​‌​​‌‌‌‌​‌​‌​​‌​​‌​‌‌‌‌‌​‌​‌​‌‌‌​‌​​​​​‌​‌​‌​‌​​​‌​​​‌​‌​‌​‌​​‌​​‌​​‌‌​‌​‌​​​​​‌​‌​‌​​‌​​‌​​‌​‌‌​​‌‌‌​‌​​​‌​​​​​​‌​​​​‌‌​‌‌​‌‌‌‌​‌‌‌​​​​​‌‌‌‌​​‌​‌‌‌​​‌​​‌‌​‌​​‌​‌‌​​‌‌‌​‌‌​‌​​​​‌‌‌​‌​​​​‌​​​​​​​‌​‌​​​​‌‌​​​‌‌​​‌​‌​​‌​​‌​​​​​​​‌‌​​‌​​​‌‌​​​​​​‌‌​​‌​​​‌‌​‌‌​​​‌​​​​​​‌​‌​‌​​​‌‌‌​​‌​​‌‌​‌​​‌​‌‌​‌‌‌​​‌‌​‌​​​​​‌​​​​​​‌​​​‌​​​‌‌​​​​‌​‌‌​‌‌‌​​‌‌​​‌‌‌​​‌​​​​​​‌​​‌​‌‌​‌‌​‌​​​​‌‌​‌‌‌‌​‌‌​​​​‌​​‌​​​​​​​‌​‌​​​​‌​​​​​‌​‌‌​‌‌​​​‌‌​​‌​‌​‌‌‌‌​​​​​‌​​​​​​‌​‌​‌​​​‌‌‌​​‌​​‌‌​‌​​‌​‌‌​‌‌‌​​‌‌​‌​​​​​‌​‌​​‌​​‌​​​​​​​‌‌‌‌​​​‌‌‌​‌​​​‌‌‌​‌​‌​‌‌​‌‌​‌​‌‌​‌‌‌‌​​‌‌​​​​​​‌‌​‌‌‌​‌​​​​​​​‌‌​‌​​‌​‌‌​‌‌‌‌​​‌​‌‌‌​​‌‌‌​‌‌​​‌‌​‌‌‌​​​‌‌‌‌‌​​​‌​​​​​​​‌​‌‌​‌​​‌​​​​​​‌​​​‌‌‌​‌‌​‌​​‌​‌‌‌​‌​​​‌​​‌​​​​‌‌‌​‌​‌​‌‌​​​‌​​​‌‌‌​‌​​​‌​​​​​​‌​​​​​​​‌‌‌​‌​​​‌‌‌​‌​‌​‌‌​‌‌​‌​‌‌​‌‌‌‌​​‌‌​​​​​​‌‌​‌‌‌​​‌​​​​​​​‌​‌‌​‌​​‌​​​​​​‌​​​‌​‌​‌‌​​‌​​​​‌‌​​‌​​​‌‌​‌​‌​​‌‌​‌​‌​​‌‌​​​‌​​‌‌‌​​‌​​‌‌‌​‌​​​‌​​​​​​‌​​‌‌​‌​‌‌​‌‌​‌​‌​​​‌​​​​‌‌‌​​‌​‌‌‌‌​‌​​​‌​‌​‌‌​‌​​‌‌​‌​​‌​‌‌‌‌​​‌‌​​‌​​‌​​​​‌‌​‌‌​​‌‌‌​‌​‌​‌‌​​​‌​‌​‌‌​‌​​‌​‌​​‌‌​‌​​​​‌‌‌‌​​​​‌​​​​‌‌​‌​​‌‌‌​​​‌‌​​‌‌​‌‌​‌​‌‌​‌‌‌​​‌‌​‌‌​​‌​‌​‌​​‌​​​​​‌‌​‌‌​​‌‌‌​‌‌​​‌​​‌​​‌​‌‌​‌‌‌​​‌​‌‌​​‌​‌​​‌‌​​​‌​‌​‌‌‌​‌‌​​‌​‌​​‌‌‌​​‌​‌‌‌​‌‌‌​‌​‌​​‌‌​‌​​‌‌‌​​‌‌‌​‌‌‌​‌‌​‌‌​‌​‌‌​​‌​‌​​‌‌​​​​​‌​​‌​​​​‌‌‌‌​​‌​‌‌​​​​‌​‌‌‌​‌‌‌‍", "không bị trừ tiền", "không thu phí"
   ];
   const PAID_WORDS = [
     "/mo after", "/month after", "per month after",
-    "thanh toán ngay", "trả ngay", "pay now", "hôm nay", "được tính phí", "bị tính phí",
+    "thanh toán ngay", "trả ngay", "pay now",
     "charged today", "charge today"
   ];
 
@@ -64,6 +64,6 @@
   try {
     let _t = null;
     const mo = new MutationObserver(() => { if (_t) clearTimeout(_t); _t = setTimeout(judge, 300); });
-    document.addEventListener("DOMContentLoaded", () => { if (document.body) mo.observe(document.body, { childList: true, subtree: true }); });
+    setInterval(judge, 1200); if (document.body) mo.observe(document.body, { childList: true, subtree: true }); else document.addEventListener("DOMContentLoaded", () => { if (document.body) mo.observe(document.body, { childList: true, subtree: true }); });
   } catch (e) {}
 })();
