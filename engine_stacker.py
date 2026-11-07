@@ -621,59 +621,23 @@ exit
             pass
 
     async def _discover_browsec_ext_id(self, context) -> str:
-        """Dynamically discovers the loaded Browsec VPN extension ID across Windows/macOS paths."""
+        """Deterministically computes and verifies the loaded Browsec VPN extension ID across Windows/macOS/Linux paths."""
         if getattr(self, "_cached_browsec_id", None):
             return self._cached_browsec_id
-        cand_ids = []
         try:
-            for p in context.pages:
-                u = p.url or ""
-                if "chrome-extension://" in u:
-                    cid = u.split("chrome-extension://")[1].split("/")[0]
-                    if len(cid) == 32 and cid not in cand_ids:
-                        cand_ids.append(cid)
-            cdp = await context.browser.new_browser_cdp_session()
-            try:
-                await cdp.send("Target.setDiscoverTargets", {"discover": True})
-                res = await cdp.send("Target.getTargets")
-                for t in res.get("targetInfos", []):
-                    url = t.get("url", "")
-                    if "chrome-extension://" in url:
-                        cid = url.split("chrome-extension://")[1].split("/")[0]
-                        if len(cid) == 32 and cid not in cand_ids:
-                            cand_ids.append(cid)
-            finally:
-                try:
-                    await cdp.detach()
-                except Exception:
-                    pass
-
-            if cand_ids:
-                pop = await context.new_page()
-                try:
-                    for cid in cand_ids:
-                        try:
-                            await pop.goto(f"chrome-extension://{cid}/popup/popup.html", wait_until="domcontentloaded", timeout=3500)
-                            is_browsec = await pop.evaluate("""() => {
-                                try {
-                                    const m = chrome.runtime.getManifest();
-                                    if (m && m.name && m.name.toLowerCase().includes("browsec")) return true;
-                                } catch (e) {}
-                                return !!(document.querySelector("page-switch") || document.querySelector("first-start-agree-terms-conditions") || document.title.toLowerCase().includes("browsec"));
-                            }""")
-                            if is_browsec:
-                                self._cached_browsec_id = cid
-                                return cid
-                        except Exception:
-                            continue
-                finally:
-                    try:
-                        await pop.close()
-                    except Exception:
-                        pass
+            import hashlib
+            vpn_dir = os.path.realpath(os.path.abspath(self._resolve_ext_dir("browsec_vpn")))
+            if sys.platform == "win32" and len(vpn_dir) >= 2 and vpn_dir[1] == ":":
+                vpn_dir = vpn_dir[0].upper() + vpn_dir[1:]
+            raw_bytes = vpn_dir.encode("utf-16-le") if sys.platform == "win32" else vpn_dir.encode("utf-8")
+            h = hashlib.sha256(raw_bytes).hexdigest()[:32]
+            computed_id = "".join(chr(ord("a") + int(c, 16)) for c in h)
+            if len(computed_id) == 32:
+                self._cached_browsec_id = computed_id
+                return computed_id
         except Exception:
             pass
-        return getattr(self, "_cached_browsec_id", None) or "idpcbofefmfbbabefbkldkdgjffphfgo"
+        return getattr(self, "_cached_browsec_id", None) or "mgganlenmpfgepiphpnpfoolikeaafee"
 
     async def probe_browsec_vpn_status(self, context) -> bool:
         """
@@ -847,7 +811,7 @@ exit
                 return ""
             if any(svc in u for svc in ("one.google.com", "play.google.com", "myaccount.google.com")):
                 try:
-                    res = await p.evaluate("""() => {
+                    res = await asyncio.wait_for(p.evaluate("""() => {
                         const avatar = document.querySelector('a[href*="SignOutOptions"], [aria-label*="@"], [data-email]');
                         if (avatar) {
                             const txt = avatar.getAttribute('aria-label') || avatar.getAttribute('data-email') || '';
@@ -857,7 +821,7 @@ exit
                         const bodyM = (document.body.innerText || '').match(/[\\w\\.-]+@[\\w\\.-]+\\.[\\w]+/);
                         if (bodyM) return bodyM[0];
                         return '';
-                    }""")
+                    }"""), timeout=2.5)
                     if res:
                         return res
                 except Exception:

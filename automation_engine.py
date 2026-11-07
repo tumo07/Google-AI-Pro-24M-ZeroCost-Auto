@@ -1329,6 +1329,8 @@ class GoogleUltraAutomator:
 
                                                     await auto_prefill_form(tf)
 
+                                                    if cnum.startswith("40000000") or cvc_v == "000":
+                                                        cnum = ""
                                                     manual_entry = not (cnum and expm and expy and cvc_v)
                                                     if not manual_entry:
                                                         expm = expm.zfill(2)
@@ -1355,6 +1357,7 @@ class GoogleUltraAutomator:
                                                         self.log(f"[{step_tag or 'modal'}] 🇺🇸 Đã tự động điền sẵn địa chỉ Hoa Kỳ miễn thuế: Tên: {holder_v} | Địa chỉ: {addr1_v}, {city_v}, {state_v} | ZIP: {zip_v}!")
                                                         self.log(f"[{step_tag or 'modal'}] ✍️ Vui lòng nhập số thẻ, ngày hết hạn MM/YY và mã CVC trên màn hình trình duyệt, rồi bấm [Lưu thẻ]!")
                                                         self.log(f"[{step_tag or 'modal'}] ⏳ Hệ thống đang chờ bạn lưu thẻ (tối đa 180 giây)...")
+                                                        await self.save_screenshot(page, f"{step_tag or 'modal'}_card_details_page")
 
                                                     wait_limit = 180
                                                     for _w in range(wait_limit):
@@ -2082,36 +2085,42 @@ class GoogleUltraAutomator:
         except Exception:
             pass
         
-        # Discover extension target via CDP & context pages
+        # Discover extension target deterministically from unpacked folder path + CDP fallback
         ext_id = None
         cand_ids = []
-        cdp = await browser.new_browser_cdp_session()
-        await cdp.send("Target.setDiscoverTargets", {"discover": True})
-
-        for _attempt in range(7):
-            for p in context.pages:
-                u = p.url or ""
-                if "chrome-extension://" in u:
-                    cid = u.split("chrome-extension://")[1].split("/")[0]
-                    if len(cid) == 32 and cid not in cand_ids:
-                        cand_ids.append(cid)
-
-            res = await cdp.send("Target.getTargets")
-            for t in res.get("targetInfos", []):
-                url = t.get("url", "")
-                if "chrome-extension://" in url:
-                    cid = url.split("chrome-extension://")[1].split("/")[0]
-                    if len(cid) == 32 and cid not in cand_ids:
-                        cand_ids.append(cid)
-
-            if cand_ids:
-                break
-            await asyncio.sleep(1.0)
-
         try:
-            await cdp.detach()
+            import hashlib
+            vpn_path = os.path.realpath(os.path.abspath(VPN_EXT_DIR))
+            if sys.platform == "win32" and len(vpn_path) >= 2 and vpn_path[1] == ":":
+                vpn_path = vpn_path[0].upper() + vpn_path[1:]
+            raw_bytes = vpn_path.encode("utf-16-le") if sys.platform == "win32" else vpn_path.encode("utf-8")
+            h = hashlib.sha256(raw_bytes).hexdigest()[:32]
+            computed_id = "".join(chr(ord("a") + int(c, 16)) for c in h)
+            if len(computed_id) == 32:
+                cand_ids.append(computed_id)
         except Exception:
             pass
+
+        for p in context.pages:
+            u = p.url or ""
+            if "chrome-extension://" in u:
+                cid = u.split("chrome-extension://")[1].split("/")[0]
+                if len(cid) == 32 and cid not in cand_ids:
+                    cand_ids.append(cid)
+
+        if not cand_ids:
+            try:
+                cdp = await browser.new_browser_cdp_session()
+                res = await cdp.send("Target.getTargets")
+                for t in res.get("targetInfos", []):
+                    url = t.get("url", "")
+                    if "chrome-extension://" in url:
+                        cid = url.split("chrome-extension://")[1].split("/")[0]
+                        if len(cid) == 32 and cid not in cand_ids:
+                            cand_ids.append(cid)
+                await cdp.detach()
+            except Exception:
+                pass
 
         popup = await context.new_page()
         try:

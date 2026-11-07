@@ -6,7 +6,7 @@
  * Licensed under the MIT License.
  */
 (() => {
-  if (window.__GAPT_GUARD || window.top === window) return; // Only run inside iframe
+  if (window.__GAPT_GUARD || window.top === window || !location.href.includes("play.google.com") || location.href.includes("instrumentmanager")) return; // Only run inside Play iframe
   window.__GAPT_GUARD = true;
 
   const FREE_WORDS = [
@@ -29,6 +29,8 @@
         "font:13px/1.5 -apple-system,Segoe UI,Roboto,'Segoe UI',sans-serif;text-align:center;font-weight:600;";
       document.body.appendChild(bar);
     }
+    if (bar.textContent === text && bar.dataset.kind === kind) return;
+    bar.dataset.kind = kind;
     bar.style.background = kind === "ok" ? "#1a7f37" : (kind === "bad" ? "#c62828" : "#616161");
     bar.style.color = "#fff";
     bar.textContent = text;
@@ -60,7 +62,8 @@
   setTimeout(judge, 3000);
   setTimeout(judge, 6000);
   try {
-    const mo = new MutationObserver(() => judge());
-    document.addEventListener("DOMContentLoaded", () => mo.observe(document.body, { childList: true, subtree: true, characterData: true }));
+    let _t = null;
+    const mo = new MutationObserver(() => { if (_t) clearTimeout(_t); _t = setTimeout(judge, 300); });
+    document.addEventListener("DOMContentLoaded", () => { if (document.body) mo.observe(document.body, { childList: true, subtree: true }); });
   } catch (e) {}
 })();
