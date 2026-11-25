@@ -15,6 +15,7 @@ REQUIRED_MODULES = [
     "customtkinter",
     "playwright",
     "cryptography",
+    "frida",
     "PIL"
 ]
 

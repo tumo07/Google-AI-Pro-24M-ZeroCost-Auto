@@ -45,7 +45,7 @@ if sys.stdout is None or sys.stderr is None or (sys.platform == "darwin" and get
         pass
 
 _instance_lock_handle = None
-_MAIN_WINDOW_TITLE = "Google AI Pro 24-Month Automator v1.3.1"
+_MAIN_WINDOW_TITLE = "Google AI Pro 24-Month Automator v2.0.0"
 
 def _focus_existing_window_or_cleanup_zombies() -> bool:
     """
@@ -216,6 +216,7 @@ SCREENSHOTS_DIR = os.path.join(BASE_DIR, "screenshots")
 os.makedirs(SCREENSHOTS_DIR, exist_ok=True)
 
 import engine_stacker
+import android_engine
 
 # Detect Operating System and CPU Architecture
 IS_MAC = sys.platform == "darwin"
@@ -264,7 +265,7 @@ class UniversalStackerApp(ctk.CTk):
             import sys; sys.exit(1)
         super().__init__()
 
-        self.title(f"Google AI Pro 24-Month Automator v1.3.1 · Universal Edition ({OS_DESC})")
+        self.title(f"Google AI Pro 27-Month Automator v2.0.0 · Android Play Billing + Universal ({OS_DESC})")
         self.geometry("1100x820")
         self.minsize(960, 700)
         self.configure(fg_color="#18181b")
@@ -450,6 +451,53 @@ class UniversalStackerApp(ctk.CTk):
         # Scrollable container for wizard steps
         scroll = ctk.CTkScrollableFrame(self.tab_wizard, fg_color="transparent")
         scroll.pack(fill="both", expand=True, padx=2, pady=2)
+
+        # 📱 Card v2.0.0: Android 27-Month Play Billing Engine (Primary)
+        card_android = ctk.CTkFrame(scroll, fg_color="#1e1b4b", corner_radius=10, border_width=1, border_color="#6366f1")
+        card_android.pack(fill="x", pady=(2, 8))
+
+        ctk.CTkLabel(
+            card_android, text="📱 V2.0.0: ANDROID PLAY BILLING 27 THÁNG (MUMU / ADB + FRIDA)",
+            font=ctk.CTkFont(family=FONT_HEADING, size=11, weight="bold"),
+            text_color="#a5b4fc"
+        ).pack(anchor="w", padx=12, pady=(8, 2))
+
+        ctk.CTkLabel(
+            card_android,
+            text="Cộng dồn 4 tầng trên Android/MuMu: pro3 (3M) ➔ pro12 (+12M) ➔ pro6 (+6M) ➔ pro6b (+6M) = 27 tháng ($0.00), tự động hủy gia hạn & kiểm tra library.db.",
+            font=ctk.CTkFont(family=FONT_BODY, size=11),
+            text_color="#e0e7ff", wraplength=410, justify="left"
+        ).pack(anchor="w", padx=12, pady=(0, 6))
+
+        row_a1 = ctk.CTkFrame(card_android, fg_color="transparent")
+        row_a1.pack(fill="x", padx=12, pady=(0, 4))
+        ctk.CTkButton(
+            row_a1, text="🔍 Kiểm Tra ADB", height=32,
+            font=ctk.CTkFont(family=FONT_BODY, size=11, weight="bold"),
+            fg_color="#4338ca", hover_color="#3730a3",
+            command=self._cmd_android_check
+        ).pack(side="left", fill="x", expand=True, padx=(0, 3))
+        ctk.CTkButton(
+            row_a1, text="📋 Quét Offer ($0.00)", height=32,
+            font=ctk.CTkFont(family=FONT_BODY, size=11, weight="bold"),
+            fg_color="#4338ca", hover_color="#3730a3",
+            command=self._cmd_android_list
+        ).pack(side="right", fill="x", expand=True, padx=(3, 0))
+
+        row_a2 = ctk.CTkFrame(card_android, fg_color="transparent")
+        row_a2.pack(fill="x", padx=12, pady=(2, 10))
+        ctk.CTkButton(
+            row_a2, text="🚀 Chạy Cộng Dồn 27 Tháng", height=36,
+            font=ctk.CTkFont(family=FONT_BODY, size=12, weight="bold"),
+            fg_color="#4f46e5", hover_color="#4338ca",
+            command=self._cmd_android_stack
+        ).pack(side="left", fill="x", expand=True, padx=(0, 3))
+        ctk.CTkButton(
+            row_a2, text="🛡️ Hủy Gia Hạn", height=36, width=120,
+            font=ctk.CTkFont(family=FONT_BODY, size=11, weight="bold"),
+            fg_color="#d97706", hover_color="#b45309",
+            command=self._cmd_android_cancel
+        ).pack(side="right", padx=(3, 0))
 
         # 🛠️ Card Step 0: Environment, macOS Permissions & Extension Staging
         card0 = ctk.CTkFrame(scroll, fg_color="#172554", corner_radius=10, border_width=1, border_color="#0284c7")
@@ -1088,6 +1136,58 @@ class UniversalStackerApp(ctk.CTk):
             self.after(0, self.set_progress, 1.0)
             self.after(0, self._highlight_step, 4)
             self.after(0, self._refresh_accounts)
+
+    def _run_android_task(self, title: str, fn):
+        if self.is_running:
+            self.append_log("WARN", "Một tiến trình đang chạy, vui lòng đợi hoàn tất...")
+            return
+        self.is_running = True
+        self.set_checkpoint_status("running", title, "Đang kết nối thiết bị Android/MuMu qua ADB & Frida...")
+        def _worker():
+            try:
+                eng = android_engine.AndroidBillingEngine(
+                    on_log=lambda lvl, msg: self.after(0, self.append_log, lvl, msg)
+                )
+                fn(eng)
+            except Exception as e:
+                self.after(0, self.append_log, "ERROR", str(e))
+                self.after(0, self.set_checkpoint_status, "error", "❌ Lỗi Android Engine", str(e))
+            finally:
+                self.is_running = False
+        threading.Thread(target=_worker, daemon=True).start()
+
+    def _cmd_android_check(self):
+        def _job(eng):
+            eng.connect_device()
+            eng.ensure_root_and_frida()
+            st = eng.read_subscription_state()
+            msg = f"ADB OK: {eng.serial}" + (f" | {st['account']} (auto_renew={st['auto_renewing']})" if st else "")
+            self.after(0, self.set_checkpoint_status, "success", "🟢 Thiết Bị Android Sẵn Sàng", msg)
+            self.after(0, self.append_log, "SUCCESS", msg)
+        self._run_android_task("🔍 Kiểm Tra ADB & Frida", _job)
+
+    def _cmd_android_list(self):
+        def _job(eng):
+            offers = eng.list_offers()
+            for o in offers:
+                tag = "FREE" if str(o.get("micros")) == "0" else f"{o.get('micros')} micros"
+                self.after(0, self.append_log, "INFO", f"{o.get('product')} | offerId={o.get('id')} | {o.get('period')} [{tag}]")
+            self.after(0, self.set_checkpoint_status, "success", "📋 Quét Offer Hoàn Tất", f"Tìm thấy {len(offers)} offer.")
+        self._run_android_task("📋 Quét Offer Google One", _job)
+
+    def _cmd_android_stack(self):
+        def _job(eng):
+            ok = eng.run_27m_stack(auto_cancel=True)
+            if ok:
+                self.after(0, self.set_checkpoint_status, "success", "🎉 Hoàn Tất 27 Tháng ($0.00)", "Đã cộng dồn 4 tầng và hủy gia hạn tự động.")
+        self._run_android_task("🚀 Cộng Dồn 27 Tháng (pro3→pro12→pro6→pro6b)", _job)
+
+    def _cmd_android_cancel(self):
+        def _job(eng):
+            ok = eng.cancel_auto_renewal()
+            if ok:
+                self.after(0, self.set_checkpoint_status, "success", "🛡️ Đã Hủy Gia Hạn", "Xác nhận subs_auto_renewing=0 trong library.db.")
+        self._run_android_task("🛡️ Hủy Gia Hạn Google Play", _job)
 
     def _cmd_run_staging(self):
         if self.is_running:

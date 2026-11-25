@@ -27,10 +27,11 @@ def add_file_with_unix_perms(zf, file_path, arc_path, is_exec=False):
 
 # 1. Package Self-Contained macOS Universal .app Bundle (Drag-to-Applications)
 print("Preparing self-contained macOS Universal .app bundle with POSIX 0755 permissions...")
-mac_zip_path = os.path.join(RELEASE_OUT, "Google-AI-Pro-Automator-v1.3.1-macOS-Universal.zip")
+mac_zip_path = os.path.join(RELEASE_OUT, "Google-AI-Pro-Automator-v2.0.0-macOS-Universal.zip")
 
 mac_files = [
-    "ensure_env.py", "gui_app.py", "engine_stacker.py", "automation_engine.py", "launch_interactive_instance.py",
+    "ensure_env.py", "gui_app.py", "android_engine.py", "run_android_27m.py",
+    "engine_stacker.py", "automation_engine.py", "launch_interactive_instance.py",
     "Google_AI_Pro_Automator.command", "setup_macos.sh", "run_gui.sh", "run_stacker.sh",
     "custom_stacking_flow.py", "run_account.py", "run_layer2_layer3_step5.py", "stack_layers_now.py",
     "config.example.json", "config.json", "requirements.txt",
@@ -85,10 +86,11 @@ print(f"[OK] Created: {mac_zip_path} ({os.path.getsize(mac_zip_path) / 1024:.2f}
 
 # 2. Package Windows Portable Python Bundle
 print("Preparing Windows Portable Python bundle with automated bootstrap...")
-win_zip_path = os.path.join(RELEASE_OUT, "Google-AI-Pro-Automator-v1.3.1-Windows-Portable.zip")
+win_zip_path = os.path.join(RELEASE_OUT, "Google-AI-Pro-Automator-v2.0.0-Windows-Portable.zip")
 
 win_files = [
-    "ensure_env.py", "gui_app.py", "engine_stacker.py", "automation_engine.py", "launch_interactive_instance.py",
+    "ensure_env.py", "gui_app.py", "android_engine.py", "run_android_27m.py", "Run_Android_27M.bat",
+    "engine_stacker.py", "automation_engine.py", "launch_interactive_instance.py",
     "start_gui.bat", "Google_AI_Pro_Tool.bat", "3_Chay_Custom_Flow.bat", "4_Dang_Nhap_Account_Moi.bat",
     "5_Chay_Nang_Cap_24T.bat", "6_Tu_Dong_A_Den_Z_Moi_Acc.bat", "launch_visible_automation.bat",
     "custom_stacking_flow.py", "run_account.py", "run_layer2_layer3_step5.py", "stack_layers_now.py",

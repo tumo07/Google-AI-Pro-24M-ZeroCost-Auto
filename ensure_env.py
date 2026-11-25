@@ -20,6 +20,7 @@ REQUIRED_PACKAGES = [
     ("playwright", "playwright>=1.40.0"),
     ("customtkinter", "customtkinter>=5.2.0"),
     ("cryptography", "cryptography>=41.0.0"),
+    ("frida", "frida==16.5.9"),
     ("PIL", "pillow>=10.0.0")
 ]
 

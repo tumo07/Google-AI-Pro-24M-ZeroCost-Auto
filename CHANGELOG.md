@@ -4,6 +4,21 @@ Toàn bộ các thay đổi, tính năng mới và cải tiến của dự án *
 
 ---
 
+## [v2.0.0] - 2026-11-25
+
+### 📱 Android Play Billing Engine (27-Month Stacking via ADB + Frida 16.5.9)
+- **🆕 `android_engine.py` & `run_android_27m.py` (+ `Run_Android_27M.bat`):**
+  - Bổ sung engine Play Billing chạy trực tiếp trên MuMu Player 12 hoặc thiết bị Android đã root qua **ADB + Frida 16.5.9**.
+  - Chuỗi cộng dồn 4 tầng tối ưu đạt **27 tháng (~820 ngày)**: `pro3` (`eft-3mo`, 3M base) ➔ `pro12` (`12months-eft`, +12M) ➔ `pro6` (`6months-eft`, +6M) ➔ `pro6b` (`6months-eft-2`, +6M) qua `SubscriptionUpdateParams` (`CHARGE_FULL_PRICE=5`).
+  - Tự động dò cổng ADB (`16384`, `16385`, `7555`, `16416`, `21503`, `62001`), cấp `adb root`, đẩy `frida-server` và module `BillingClient` 5.2.1.
+  - Bảo vệ `$0.00` qua `uiautomator`, tự điền `Verify` password, và tự động hủy gia hạn trên Google Play kèm xác minh `subs_auto_renewing = 0` trong `library.db`.
+- **🎨 Cập nhật Giao Diện `gui_app.py` v2.0.0:**
+  - Tích hợp thẻ **Android Play Billing 27 Tháng** (`Kiểm Tra ADB`, `Quét Offer`, `Chạy Cộng Dồn 27 Tháng`, `Hủy Gia Hạn`) ngay trong tab Hướng Dẫn.
+- **📦 Cập nhật Dependency (`frida==16.5.9`):**
+  - Bổ sung `frida==16.5.9` vào `requirements.txt`, `ensure_env.py`, và `tools/check_dependencies.py`.
+
+---
+
 ## [v1.3.1] - 2026-11-06
 
 ### 🎨 Tối Ưu Hóa Giao Diện Windows 11 Fluent & Quản Lý Đa Tài Khoản Chuyên Sâu

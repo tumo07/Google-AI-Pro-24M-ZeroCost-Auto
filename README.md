@@ -1,15 +1,42 @@
-# 🚀 Google AI Pro 24-Month Zero-Cost Stacking Automator
+# 🚀 Google AI Pro 27-Month Zero-Cost Stacking Automator (v2.0.0)
 
-[![Release: v1.3.1](https://img.shields.io/badge/Release-v1.3.1-blue.svg)](https://github.com/tumo07/Google-AI-Pro-24M-ZeroCost-Auto/releases/tag/v1.3.1)
+[![Release: v2.0.0](https://img.shields.io/badge/Release-v2.0.0-blue.svg)](https://github.com/tumo07/Google-AI-Pro-24M-ZeroCost-Auto/releases/tag/v2.0.0)
 [![macOS](https://img.shields.io/badge/macOS-Apple%20Silicon%20%7C%20Intel-black.svg?logo=apple)](setup_macos.sh)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![Python: 3.10+](https://img.shields.io/badge/Python-3.10%2B-brightgreen.svg)](https://www.python.org/)
-[![Playwright](https://img.shields.io/badge/Playwright-CDP%20Automation-orange.svg)](https://playwright.dev/)
+[![Frida](https://img.shields.io/badge/Frida-16.5.9%20Play%20Billing-indigo.svg)](run_android_27m.py)
 [![Verified Author](https://img.shields.io/badge/Author-tumo07-purple.svg)](https://github.com/tumo07)
 [![Cryptographically Signed](https://img.shields.io/badge/Release-Ed25519%20Signed-success.svg)](tools/verify_release.py)
-[![Changelog](https://img.shields.io/badge/Changelog-v1.3.1-informational.svg)](CHANGELOG.md)
+[![Changelog](https://img.shields.io/badge/Changelog-v2.0.0-informational.svg)](CHANGELOG.md)
 
-**Google AI Pro 24M Zero-Cost Auto** là bộ công cụ mã nguồn mở tự động hóa quy trình nghiên cứu cấu trúc gói đăng ký Google One / Google AI Pro (5 TB) và YouTube Premium 24 tháng với cơ chế bảo vệ nghiêm ngặt **US$0.00 (Zero-Billing Price Guard)** và tự động hủy gia hạn & gỡ sạch thẻ ngân hàng sau khi hoàn tất.
+**Google AI Pro 24M Zero-Cost Auto (v2.0.0)** là bộ công cụ mã nguồn mở tự động hóa quy trình cộng dồn **27 tháng Google AI Pro (5 TB)** với cơ chế bảo vệ **US$0.00 (Zero-Billing Price Guard)**, hỗ trợ **Android Play Billing Engine (MuMu / Rooted Android + ADB + Frida 16.5.9)** và tự động hủy gia hạn sau khi hoàn tất.
+
+---
+
+## ⚡ Mới Trong v2.0.0: Android Play Billing Engine (27 Tháng)
+
+Phiên bản **v2.0.0** bổ sung `android_engine.py` và `run_android_27m.py` (cùng thẻ điều khiển trực tiếp trong `gui_app.py`) chạy qua **ADB + Frida 16.5.9** trên MuMu Player 12 hoặc thiết bị Android đã root:
+
+1. **Tự động kết nối & khởi tạo môi trường:** Tự dò cổng ADB (`16384`, `16385`, `7555`, `16416`, `21503`, `62001`), cấp quyền `adb root`, đẩy & khởi chạy `frida-server` (`127.0.0.1:27042`) và module Play Billing.
+2. **Chuỗi cộng dồn chuẩn 27 tháng (~820 ngày):**
+   - **Bước 1 (`pro3` / `eft-3mo`):** Kích hoạt gói dùng thử nền 3 tháng (`g1.play.2tb.ai`).
+   - **Bước 2 (`pro12` / `12months-eft`):** Nâng cấp/cộng dồn +12 tháng qua `SubscriptionUpdateParams` (`CHARGE_FULL_PRICE=5`).
+   - **Bước 3 (`pro6` / `6months-eft`):** Cộng dồn +6 tháng.
+   - **Bước 4 (`pro6b` / `6months-eft-2`):** Cộng dồn +6 tháng cuối — đạt **27 tháng (820 ngày)** miễn phí `$0.00`.
+3. **Bảo vệ $0.00 & Tự động hủy gia hạn:** Kiểm tra `uiautomator` đảm bảo `$0.00 / Free trial` trước khi nhấn, hỗ trợ nhập mật khẩu `Verify`, và tự động hủy gia hạn trên Google Play + xác minh `subs_auto_renewing = 0` trong `library.db`.
+
+### Chạy Nhanh Bằng CLI / Batch (v2.0.0)
+```powershell
+# Kiểm tra thiết bị ADB, root & frida-server
+python run_android_27m.py --check
+
+# Quét danh sách offer miễn phí ($0.00) của tài khoản đang đăng nhập
+python run_android_27m.py --list
+
+# Chạy trọn bộ cộng dồn 27 tháng (pro3 -> pro12 -> pro6 -> pro6b) + tự động hủy gia hạn
+python run_android_27m.py --stack --password "MatKhauGoogleCuaBan"
+```
+Hoặc nhấp đúp **`Run_Android_27M.bat`** trên Windows.
 
 ---
 
